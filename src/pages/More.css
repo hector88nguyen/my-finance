@@ -1,0 +1,88 @@
+.more-page {
+    padding: 1rem;
+}
+
+.more-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.settings-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.settings-desc {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.settings-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.option-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 1rem;
+}
+
+.option-btn.export-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.option-btn.export-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+.option-btn.import-btn {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.option-btn.import-btn:hover {
+    background-color: var(--border-color);
+}
+
+.option-btn.delete-btn {
+    background-color: #fef2f2;
+    color: var(--danger-color);
+    border: 1px solid #fecaca;
+    margin-top: 0.5rem;
+}
+
+.option-btn.delete-btn:hover {
+    background-color: #fee2e2;
+}
+
+@media (min-width: 768px) {
+    .settings-actions {
+        flex-direction: row;
+    }
+
+    .option-btn {
+        flex: 1;
+    }
+}

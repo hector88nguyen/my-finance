@@ -1,0 +1,76 @@
+.reports-page {
+    padding: 1rem;
+}
+
+.month-selector {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.month-selector .input-field {
+    padding: 0.5rem;
+    width: auto;
+    font-weight: 600;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+@media (min-width: 1024px) {
+    .reports-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.report-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.report-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.total-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.expense-badge {
+    background-color: #fef2f2;
+    color: var(--danger-color);
+}
+
+.income-badge {
+    background-color: #f0fdf4;
+    color: var(--success-color);
+}
+
+.chart-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+}
+
+.empty-chart {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.custom-tooltip {
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
