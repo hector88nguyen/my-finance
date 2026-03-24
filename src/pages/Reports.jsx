@@ -1,17 +1,32 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { getTransactions } from '../utils/localStorage';
+import { Loader2 } from 'lucide-react';
+import { getTransactions } from '../services/firebaseService';
 import { getCategoryData } from '../utils/categories';
 import './Reports.css';
 
-export default function Reports() {
+export default function Reports({ user }) {
     const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [month, setMonth] = useState(new Date().getMonth());
     const [year, setYear] = useState(new Date().getFullYear());
 
     useEffect(() => {
-        setTransactions(getTransactions());
-    }, []);
+        const fetchData = async () => {
+            if (user) {
+                setLoading(true);
+                try {
+                    const data = await getTransactions(user.uid);
+                    setTransactions(data);
+                } catch (err) {
+                    console.error("Lỗi lấy dữ liệu báo cáo:", err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+        fetchData();
+    }, [user]);
 
     const { expenseData, incomeData, totalExpense, totalIncome } = useMemo(() => {
         const filtered = transactions.filter(tx => {
@@ -71,6 +86,15 @@ export default function Reports() {
         }
         return null;
     };
+
+    if (loading) {
+        return (
+            <div className="empty-state" style={{ height: '60vh' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary-color)" />
+                <p>Đang tải dữ liệu báo cáo...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="reports-page">

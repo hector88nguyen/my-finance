@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, X, Filter } from 'lucide-react';
-import { getTransactions, addTransaction, deleteTransaction, getAccounts, addAccount } from '../utils/localStorage';
+import { Plus, Trash2, X, Filter, Loader2 } from 'lucide-react';
+import { getTransactions, addTransaction, deleteTransaction, getAccounts, addAccount } from '../services/firebaseService';
 import { CATEGORIES, getCategoryData } from '../utils/categories';
 import CurrencyInput from '../components/CurrencyInput';
 import './Transactions.css';
@@ -23,9 +23,11 @@ const getDateLabel = (dateStr) => {
     return date.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-export default function Transactions() {
+export default function Transactions({ user }) {
     const [transactions, setTransactions] = useState([]);
     const [accounts, setAccounts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [filterAccountId, setFilterAccountId] = useState('all');
 
@@ -44,54 +46,81 @@ export default function Transactions() {
         accountId: ''
     });
 
-    // Custom categories added inline
+    // Custom categories added inline (UI only until added to a tx)
     const [customCategories, setCustomCategories] = useState([]);
 
     const location = useLocation();
     const navigate = useNavigate();
 
-    useEffect(() => {
-        setTransactions(getTransactions());
-        const accs = getAccounts();
-        setAccounts(accs);
+    const fetchData = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const [txs, accs] = await Promise.all([
+                getTransactions(user.uid),
+                getAccounts(user.uid)
+            ]);
+            setTransactions(txs);
+            setAccounts(accs);
 
-        if (location.state?.filterAccountId) {
-            setFilterAccountId(location.state.filterAccountId);
-            navigate('.', { replace: true, state: {} });
-        } else if (location.state?.openAdd) {
-            const defaultId = location.state.defaultAccountId || (accs.length > 0 ? accs[0].id : '');
-            setFormData(prev => ({ ...prev, accountId: defaultId }));
-            setShowModal(true);
-            navigate('.', { replace: true, state: {} });
-        } else if (accs.length > 0 && !formData.accountId) {
-            setFormData(prev => ({ ...prev, accountId: accs[0].id }));
+            // Handle location state for filtering or opening modal
+            if (location.state?.filterAccountId) {
+                setFilterAccountId(location.state.filterAccountId);
+                navigate('.', { replace: true, state: {} });
+            } else if (location.state?.openAdd) {
+                const defaultId = location.state.defaultAccountId || (accs.length > 0 ? accs[0].id : '');
+                setFormData(prev => ({ ...prev, accountId: defaultId }));
+                setShowModal(true);
+                navigate('.', { replace: true, state: {} });
+            } else if (accs.length > 0 && !formData.accountId) {
+                setFormData(prev => ({ ...prev, accountId: accs[0].id }));
+            }
+        } catch (err) {
+            console.error("Lỗi lấy dữ liệu:", err);
+        } finally {
+            setLoading(false);
         }
-    }, [location.state, navigate, formData.accountId]);
+    };
 
-    const handleAdd = (e) => {
+    useEffect(() => {
+        fetchData();
+    }, [user]);
+
+    const handleAdd = async (e) => {
         e.preventDefault();
-        if (!formData.amount || !formData.category || !formData.accountId) {
+        if (!formData.amount || !formData.category || !formData.accountId || !user) {
             alert("Vui lòng nhập đủ các trường yêu cầu.");
             return;
         }
-        const newTx = addTransaction(formData);
-        setTransactions([newTx, ...transactions]);
-        setAccounts(getAccounts()); // refresh balances
-        setShowModal(false);
-        setFormData({
-            type: 'expense', amount: '', category: '', note: '',
-            accountId: accounts.length > 0 ? accounts[0].id : ''
-        });
-        setCustomCategories([]);
-        setShowNewCategory(false);
-        setShowNewAccount(false);
+        setSubmitting(true);
+        try {
+            await addTransaction(user.uid, formData);
+            await fetchData(); // Refresh both txs and accounts (for balance)
+            setShowModal(false);
+            setFormData({
+                type: 'expense', amount: '', category: '', note: '',
+                accountId: accounts.length > 0 ? accounts[0].id : ''
+            });
+            setCustomCategories([]);
+            setShowNewCategory(false);
+            setShowNewAccount(false);
+        } catch (err) {
+            alert("Lỗi thêm giao dịch: " + err.message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
-            const updated = deleteTransaction(id);
-            setTransactions(updated);
-            setAccounts(getAccounts());
+            setLoading(true);
+            try {
+                await deleteTransaction(user.uid, id);
+                await fetchData();
+            } catch (err) {
+                alert("Lỗi xóa giao dịch: " + err.message);
+                setLoading(false);
+            }
         }
     };
 
@@ -104,15 +133,22 @@ export default function Transactions() {
         setShowNewCategory(false);
     };
 
-    const handleAddNewAccount = () => {
+    const handleAddNewAccount = async () => {
         const name = newAccountName.trim();
-        if (!name) return;
-        const newAcc = addAccount({ name, balance: newAccountBalance, icon: 'Wallet' });
-        setAccounts(prev => [...prev, newAcc]);
-        setFormData(f => ({ ...f, accountId: newAcc.id }));
-        setNewAccountName('');
-        setNewAccountBalance('');
-        setShowNewAccount(false);
+        if (!name || !user) return;
+        setSubmitting(true);
+        try {
+            const newAcc = await addAccount(user.uid, { name, balance: newAccountBalance, icon: 'Wallet' });
+            setAccounts(prev => [...prev, newAcc]);
+            setFormData(f => ({ ...f, accountId: newAcc.id }));
+            setNewAccountName('');
+            setNewAccountBalance('');
+            setShowNewAccount(false);
+        } catch (err) {
+            alert("Lỗi tạo tài khoản: " + err.message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // Group transactions by date
@@ -131,6 +167,15 @@ export default function Transactions() {
     }, [displayedTransactions]);
 
     const allCategories = [...CATEGORIES[formData.type], ...customCategories];
+
+    if (loading && transactions.length === 0) {
+        return (
+            <div className="empty-state" style={{ height: '60vh' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary-color)" />
+                <p>Đang tải giao dịch...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="transactions-page">
@@ -157,7 +202,6 @@ export default function Transactions() {
                 </button>
             </div>
 
-            {/* Grouped transaction list */}
             {displayedTransactions.length === 0 ? (
                 <div className="card">
                     <div className="empty-state"><p>Chưa có giao dịch nào phù hợp.</p></div>
@@ -220,7 +264,6 @@ export default function Transactions() {
                                     value={formData.amount} onChange={(val) => setFormData({ ...formData, amount: val })} required />
                             </div>
 
-                            {/* Category with inline create */}
                             <div className="form-group">
                                 <label>Danh mục</label>
                                 <select className="input-field" value={formData.category}
@@ -246,7 +289,6 @@ export default function Transactions() {
                                 )}
                             </div>
 
-                            {/* Account with inline create */}
                             <div className="form-group">
                                 <label>Vào tài khoản</label>
                                 <select className="input-field" value={formData.accountId}
@@ -267,7 +309,9 @@ export default function Transactions() {
                                         <CurrencyInput className="input-field" placeholder="Số dư ban đầu (VNĐ)"
                                             value={newAccountBalance} onChange={setNewAccountBalance} />
                                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                            <button type="button" className="btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '0.5rem' }} onClick={handleAddNewAccount}>Tạo</button>
+                                            <button type="button" className="btn-primary" disabled={submitting} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem' }} onClick={handleAddNewAccount}>
+                                                {submitting ? '...' : 'Tạo'}
+                                            </button>
                                             <button type="button" className="btn-secondary" style={{ flex: 1, padding: '0.5rem' }} onClick={() => setShowNewAccount(false)}>Huỷ</button>
                                         </div>
                                     </div>
@@ -280,8 +324,8 @@ export default function Transactions() {
                                     value={formData.note} onChange={(e) => setFormData({ ...formData, note: e.target.value })} />
                             </div>
 
-                            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
-                                Lưu giao dịch
+                            <button type="submit" className="btn-primary" disabled={submitting} style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
+                                {submitting ? 'Đang lưu...' : 'Lưu giao dịch'}
                             </button>
                         </form>
                     </div>

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowUpRight, ArrowDownRight, Wallet, Activity } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Loader2 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { getTransactions } from '../utils/localStorage';
+import { getTransactions } from '../services/firebaseService';
 import './Dashboard.css';
 
 const VND = (amount) =>
@@ -23,13 +23,26 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-export default function Dashboard() {
+export default function Dashboard({ user }) {
     const [transactions, setTransactions] = useState([]);
     const [chartFilter, setChartFilter] = useState('month'); // 'week' | 'month'
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setTransactions(getTransactions());
-    }, []);
+        const fetchData = async () => {
+            if (user) {
+                try {
+                    const data = await getTransactions(user.uid);
+                    setTransactions(data);
+                } catch (err) {
+                    console.error("Lỗi lấy giao dịch:", err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+        fetchData();
+    }, [user]);
 
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
     const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
@@ -39,7 +52,6 @@ export default function Dashboard() {
         const now = new Date();
 
         if (chartFilter === 'week') {
-            // Last 7 days
             return Array.from({ length: 7 }, (_, i) => {
                 const d = new Date(now);
                 d.setDate(now.getDate() - (6 - i));
@@ -53,7 +65,6 @@ export default function Dashboard() {
                 };
             });
         } else {
-            // Current month: group by date
             const year = now.getFullYear();
             const month = now.getMonth();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -68,11 +79,20 @@ export default function Dashboard() {
                     'Thu nhập': dayTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0),
                     'Chi tiêu': dayTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0),
                 };
-            }).filter(d => d['Thu nhập'] > 0 || d['Chi tiêu'] > 0); // only days with data
+            }).filter(d => d['Thu nhập'] > 0 || d['Chi tiêu'] > 0);
         }
     }, [transactions, chartFilter]);
 
     const recentTransactions = transactions.slice(0, 5);
+
+    if (loading) {
+        return (
+            <div className="empty-state" style={{ height: '60vh' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary-color)" />
+                <p>Đang tải dữ liệu...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="dashboard">
@@ -102,7 +122,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Bar Chart */}
             <div className="card chart-section">
                 <div className="chart-header">
                     <h2>Biểu đồ Thu / Chi</h2>
@@ -134,7 +153,6 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Recent transactions */}
             <div className="recent-section">
                 <div className="section-header">
                     <h2>Giao dịch gần đây</h2>

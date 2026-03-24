@@ -1,23 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Wallet, PieChart, Grid, LogOut, Plus, ChevronDown, ChevronRight } from 'lucide-react';
-import { logoutUser, getCurrentUser, getAccounts } from '../utils/localStorage';
+import { signOutUser, getAccounts } from '../services/firebaseService';
 import './Layout.css';
 
-const Layout = ({ children }) => {
+const Layout = ({ user, children }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const user = getCurrentUser();
 
     const [accounts, setAccounts] = useState([]);
     const [isAccOpen, setIsAccOpen] = useState(true);
 
     useEffect(() => {
-        setAccounts(getAccounts());
-    }, [location.pathname]);
+        if (user) {
+            const fetchAccounts = async () => {
+                try {
+                    const data = await getAccounts(user.uid);
+                    setAccounts(data);
+                } catch (err) {
+                    console.error("Lỗi lấy danh sách ví:", err);
+                }
+            };
+            fetchAccounts();
+        }
+    }, [user, location.pathname]);
 
-    const handleLogout = () => {
-        logoutUser();
+    const handleLogout = async () => {
+        await signOutUser();
         navigate('/login');
     };
 
@@ -81,8 +90,10 @@ const Layout = ({ children }) => {
 
                 <div className="sidebar-footer">
                     <div className="user-info">
-                        <div className="avatar">{user?.name?.charAt(0).toUpperCase()}</div>
-                        <span>{user?.name}</span>
+                        <div className="avatar">{user?.email?.charAt(0).toUpperCase()}</div>
+                        <div className="user-details">
+                            <span className="user-name">{user?.email?.split('@')[0]}</span>
+                        </div>
                     </div>
                     <button onClick={handleLogout} className="logout-btn">
                         <LogOut size={20} />
@@ -135,4 +146,5 @@ const Layout = ({ children }) => {
         </div>
     );
 };
+
 export default Layout;

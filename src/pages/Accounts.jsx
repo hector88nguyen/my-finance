@@ -1,29 +1,43 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Eye, EyeOff, MoreVertical, Wallet, CreditCard, PiggyBank, Briefcase } from 'lucide-react';
-import { getAccounts, addAccount, editAccount } from '../utils/localStorage';
+import { Plus, Eye, EyeOff, MoreVertical, Wallet, CreditCard, PiggyBank, Briefcase, Loader2 } from 'lucide-react';
+import { getAccounts, addAccount, editAccount } from '../services/firebaseService';
 import CurrencyInput from '../components/CurrencyInput';
 import './Accounts.css';
 
-export default function Accounts() {
+export default function Accounts({ user }) {
     const [accounts, setAccounts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showBalance, setShowBalance] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingAcc, setEditingAcc] = useState(null);
     const navigate = useNavigate();
 
-    // Add form state
+    // Form states
     const [newAccName, setNewAccName] = useState('');
     const [newAccBalance, setNewAccBalance] = useState('');
-
-    // Edit form state
     const [editAccName, setEditAccName] = useState('');
     const [editAccBalance, setEditAccBalance] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const fetchData = async () => {
+        if (user) {
+            setLoading(true);
+            try {
+                const data = await getAccounts(user.uid);
+                setAccounts(data);
+            } catch (err) {
+                console.error("Lỗi lấy danh sách ví:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
 
     useEffect(() => {
-        setAccounts(getAccounts());
-    }, []);
+        fetchData();
+    }, [user]);
 
     const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
@@ -32,14 +46,21 @@ export default function Accounts() {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
 
-    const handleAddAccount = (e) => {
+    const handleAddAccount = async (e) => {
         e.preventDefault();
-        if (!newAccName) return;
-        const newAcc = addAccount({ name: newAccName, balance: newAccBalance, icon: 'Wallet' });
-        setAccounts([...accounts, newAcc]);
-        setShowAddModal(false);
-        setNewAccName('');
-        setNewAccBalance('');
+        if (!newAccName || !user) return;
+        setSubmitting(true);
+        try {
+            await addAccount(user.uid, { name: newAccName, balance: newAccBalance, icon: 'Wallet' });
+            await fetchData();
+            setShowAddModal(false);
+            setNewAccName('');
+            setNewAccBalance('');
+        } catch (err) {
+            alert("Lỗi thêm tài khoản: " + err.message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleOpenEdit = (acc) => {
@@ -49,12 +70,19 @@ export default function Accounts() {
         setShowEditModal(true);
     };
 
-    const handleEditAccount = (e) => {
+    const handleEditAccount = async (e) => {
         e.preventDefault();
         if (!editAccName || !editingAcc) return;
-        const updated = editAccount(editingAcc.id, { name: editAccName, balance: editAccBalance });
-        setAccounts(accounts.map(a => a.id === updated.id ? updated : a));
-        setShowEditModal(false);
+        setSubmitting(true);
+        try {
+            await editAccount(editingAcc.id, { name: editAccName, balance: editAccBalance });
+            await fetchData();
+            setShowEditModal(false);
+        } catch (err) {
+            alert("Lỗi cập nhật: " + err.message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const getIcon = (iconName) => {
@@ -65,6 +93,15 @@ export default function Accounts() {
             default: return <Wallet size={24} />;
         }
     };
+
+    if (loading) {
+        return (
+            <div className="empty-state" style={{ height: '60vh' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary-color)" />
+                <p>Đang tải danh sách tài khoản...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="accounts-page">
@@ -93,35 +130,41 @@ export default function Accounts() {
                 </div>
 
                 <div className="accounts-list card">
-                    {accounts.map(acc => (
-                        <div key={acc.id} className="acc-item">
-                            <div
-                                className="acc-info-left"
-                                style={{ cursor: 'pointer', flex: 1 }}
-                                onClick={() => navigate('/transactions', { state: { filterAccountId: acc.id } })}
-                                title="Xem giao dịch của tài khoản này"
-                            >
-                                <div className="acc-icon-box">
-                                    {getIcon(acc.icon)}
-                                </div>
-                                <div className="acc-details">
-                                    <h5 style={{ color: 'var(--primary-color)' }}>{acc.name}</h5>
-                                    <p>{formatMoney(acc.balance)}</p>
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button
-                                    className="quick-add-btn"
-                                    onClick={() => navigate('/transactions', { state: { openAdd: true, defaultAccountId: acc.id } })}
-                                    title="Thêm giao dịch"
-                                >
-                                    <Plus size={20} />
-                                </button>
-                                <button className="more-btn" onClick={() => handleOpenEdit(acc)} title="Sửa thông tin">
-                                    <MoreVertical size={20} />
-                                </button>
-                            </div>
+                    {accounts.length === 0 ? (
+                        <div className="empty-state" style={{ padding: '2rem' }}>
+                            <p>Bạn chưa tạo tài khoản nào.</p>
                         </div>
+                    ) : (
+                        accounts.map(acc => (
+                            <div key={acc.id} className="acc-item">
+                                <div
+                                    className="acc-info-left"
+                                    style={{ cursor: 'pointer', flex: 1 }}
+                                    onClick={() => navigate('/transactions', { state: { filterAccountId: acc.id } })}
+                                    title="Xem giao dịch của tài khoản này"
+                                >
+                                    <div className="acc-icon-box">
+                                        {getIcon(acc.icon)}
+                                    </div>
+                                    <div className="acc-details">
+                                        <h5 style={{ color: 'var(--primary-color)' }}>{acc.name}</h5>
+                                        <p>{formatMoney(acc.balance)}</p>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button
+                                        className="quick-add-btn"
+                                        onClick={() => navigate('/transactions', { state: { openAdd: true, defaultAccountId: acc.id } })}
+                                        title="Thêm giao dịch"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                    <button className="more-btn" onClick={() => handleOpenEdit(acc)} title="Sửa thông tin">
+                                        <MoreVertical size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        )
                     ))}
                 </div>
             </div>
@@ -154,7 +197,9 @@ export default function Accounts() {
                                     placeholder="0"
                                 />
                             </div>
-                            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>Lưu</button>
+                            <button type="submit" className="btn-primary" disabled={submitting} style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
+                                {submitting ? 'Đang lưu...' : 'Lưu'}
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -188,7 +233,9 @@ export default function Accounts() {
                                     placeholder="0"
                                 />
                             </div>
-                            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>Cập nhật</button>
+                            <button type="submit" className="btn-primary" disabled={submitting} style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
+                                {submitting ? 'Đang cập nhật...' : 'Cập nhật'}
+                            </button>
                         </form>
                     </div>
                 </div>

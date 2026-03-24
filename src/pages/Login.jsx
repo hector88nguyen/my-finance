@@ -1,22 +1,37 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet } from 'lucide-react';
-import { loginUser } from '../utils/localStorage';
+import { Wallet, LogIn, UserPlus } from 'lucide-react';
+import { loginUser, registerUser } from '../services/firebaseService';
 import './Login.css';
 
 export default function Login() {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isRegister, setIsRegister] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
         try {
-            loginUser(username, password);
+            if (isRegister) {
+                await registerUser(email, password);
+            } else {
+                await loginUser(email, password);
+            }
             navigate('/');
         } catch (err) {
-            setError(err.message);
+            let msg = err.message;
+            if (msg.includes('auth/invalid-email')) msg = 'Email không hợp lệ.';
+            if (msg.includes('auth/user-not-found') || msg.includes('auth/wrong-password')) msg = 'Email hoặc mật khẩu không đúng.';
+            if (msg.includes('auth/email-already-in-use')) msg = 'Email này đã được đăng ký.';
+            if (msg.includes('auth/weak-password')) msg = 'Mật khẩu cần tối thiểu 6 ký tự.';
+            setError(msg);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -27,21 +42,21 @@ export default function Login() {
                     <div className="logo-wrapper">
                         <Wallet size={40} color="white" />
                     </div>
-                    <h1>Chào mừng quay lại</h1>
-                    <p>Quản lý tài chính cá nhân hiệu quả</p>
+                    <h1>{isRegister ? 'Tạo tài khoản mới' : 'Chào mừng quay lại'}</h1>
+                    <p>{isRegister ? 'Bắt đầu quản lý tài chính ngay hôm nay' : 'Quản lý tài chính cá nhân hiệu quả'}</p>
                 </div>
 
-                {error && <div className="error-message">{error}</div>}
+                {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-                <form onSubmit={handleLogin}>
+                <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Tên đăng nhập</label>
+                        <label>Email</label>
                         <input
-                            type="text"
+                            type="email"
                             className="input-field"
-                            placeholder="Nhập tên đăng nhập"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="example@gmail.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
                         />
                     </div>
@@ -50,18 +65,27 @@ export default function Login() {
                         <input
                             type="password"
                             className="input-field"
-                            placeholder="Nhập mật khẩu"
+                            placeholder="Nhập mật khẩu (min 6 ký tự)"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
                     </div>
-                    <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                        Đăng nhập
+                    <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
+                        {loading ? 'Đang xử lý...' : (isRegister ? 'Đăng ký' : 'Đăng nhập')}
                     </button>
                 </form>
 
-                <p className="login-hint">Gợi ý: Dùng tk/mk bất kỳ &gt;3 kí tự (dữ liệu lưu cục bộ local)</p>
+                <div className="login-footer" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                    <button 
+                        className="btn-text" 
+                        onClick={() => setIsRegister(!isRegister)}
+                        style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}
+                    >
+                        {isRegister ? <LogIn size={18} /> : <UserPlus size={18} />}
+                        {isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'}
+                    </button>
+                </div>
             </div>
         </div>
     );

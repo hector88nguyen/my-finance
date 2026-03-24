@@ -1,94 +1,119 @@
-import { Download, Upload, Trash2, Database } from 'lucide-react';
+import { useState } from 'react';
+import { Download, Upload, Trash2, Database, LogOut, User, RefreshCw, Loader2 } from 'lucide-react';
+import { signOutUser, addAccount, addTransaction } from '../services/firebaseService';
+import { getAccounts, getTransactions } from '../utils/localStorage';
 import './More.css';
 
-export default function More() {
-    const handleExport = () => {
-        const data = {
-            users: localStorage.getItem('MF_USERS'),
-            currentUser: localStorage.getItem('MF_CURRENT_USER'),
-            accounts: localStorage.getItem('MF_ACCOUNTS'),
-            transactions: localStorage.getItem('MF_TRANSACTIONS')
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `finance-backup-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+export default function More({ user }) {
+    const [migrating, setMigrating] = useState(false);
+
+    const handleLogout = async () => {
+        if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+            await signOutUser();
+        }
     };
 
-    const handleImport = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
+    const handleMigrate = async () => {
+        if (!user) return;
+        const localAccs = getAccounts();
+        const localTxs = getTransactions();
+
+        if (localAccs.length === 0 && localTxs.length === 0) {
+            alert("Không tìm thấy dữ liệu cũ trong trình duyệt này.");
+            return;
+        }
+
+        if (confirm(`Tìm thấy ${localAccs.length} tài khoản và ${localTxs.length} giao dịch cũ. Bạn có muốn đưa chúng lên Cloud không? (Có thể gây trùng lặp nếu đã thực hiện trước đó)`)) {
+            setMigrating(true);
             try {
-                const data = JSON.parse(event.target.result);
-                if (data.users) localStorage.setItem('MF_USERS', data.users);
-                if (data.currentUser) localStorage.setItem('MF_CURRENT_USER', data.currentUser);
-                if (data.accounts) localStorage.setItem('MF_ACCOUNTS', data.accounts);
-                if (data.transactions) localStorage.setItem('MF_TRANSACTIONS', data.transactions);
-                alert('Phục hồi dữ liệu thành công! Ứng dụng sẽ tải lại.');
-                window.location.href = '/';
+                // Migrate accounts first
+                const accMap = {}; // oldId -> newId
+                for (const acc of localAccs) {
+                    const newAcc = await addAccount(user.uid, {
+                        name: acc.name,
+                        balance: acc.balance,
+                        icon: acc.icon
+                    });
+                    accMap[acc.id] = newAcc.id;
+                }
+
+                // Migrate transactions
+                for (const tx of localTxs) {
+                    await addTransaction(user.uid, {
+                        type: tx.type,
+                        amount: tx.amount,
+                        category: tx.category,
+                        note: tx.note,
+                        accountId: accMap[tx.accountId] || ''
+                    });
+                }
+
+                alert("Chúc mừng! Dữ liệu đã được di trú lên Cloud thành công.");
             } catch (err) {
-                alert('File không hợp lệ hoặc bị lỗi!');
+                alert("Lỗi di trú: " + err.message);
+            } finally {
+                setMigrating(false);
             }
-        };
-        reader.readAsText(file);
+        }
     };
 
-    const handleClear = () => {
-        if (confirm('CẢNH BÁO: Toàn bộ dữ liệu tài khoản và giao dịch sẽ bị xóa vĩnh viễn. Bạn có chắc chắn?')) {
-            localStorage.removeItem('MF_ACCOUNTS');
-            localStorage.removeItem('MF_TRANSACTIONS');
-            alert('Đã xóa bộ nhớ cục bộ.');
-            window.location.href = '/';
+    const handleClearLocal = () => {
+        if (confirm('Xóa bộ nhớ tạm của trình duyệt? (Không ảnh hưởng đến dữ liệu Cloud)')) {
+            localStorage.clear();
+            alert('Đã dọn dẹp bộ nhớ tạm.');
+            window.location.reload();
         }
     };
 
     return (
         <div className="more-page">
             <div className="page-header">
-                <h1 className="page-title">Cài đặt & Công cụ</h1>
+                <h1 className="page-title">Cài đặt</h1>
             </div>
 
             <div className="more-content">
+                {/* User Info */}
                 <div className="card settings-card">
                     <div className="settings-header">
-                        <Database size={24} color="var(--primary-color)" />
-                        <h3>Sao lưu & Phục hồi dữ liệu</h3>
+                        <User size={24} color="var(--primary-color)" />
+                        <h3>Tài khoản</h3>
                     </div>
-                    <p className="settings-desc">
-                        Dữ liệu của bạn được lưu an toàn trên trình duyệt này (LocalStorage). Hãy xuất file sao lưu phòng trường hợp bạn cài lại máy hoặc xóa bộ nhớ Cache.
-                    </p>
-
-                    <div className="settings-actions">
-                        <button className="option-btn export-btn" onClick={handleExport}>
-                            <Download size={20} />
-                            Tải file Sao Lưu (.json)
-                        </button>
-
-                        <label className="option-btn import-btn">
-                            <Upload size={20} />
-                            Nạp file Cũ (Khôi phục)
-                            <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
-                        </label>
+                    <div className="user-profile-info" style={{ marginTop: '1rem' }}>
+                        <p><strong>Email:</strong> {user?.email}</p>
+                        <p><strong>UID:</strong> <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user?.uid}</span></p>
                     </div>
+                    <button className="option-btn logout-btn" onClick={handleLogout} style={{ marginTop: '1.5rem', width: '100%', color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }}>
+                        <LogOut size={20} />
+                        Đăng xuất
+                    </button>
                 </div>
 
+                {/* Migration Tool */}
+                <div className="card settings-card">
+                    <div className="settings-header">
+                        <RefreshCw size={24} color="var(--primary-color)" />
+                        <h3>Di trú dữ liệu</h3>
+                    </div>
+                    <p className="settings-desc">
+                        Chuyển toàn bộ dữ liệu từ bộ nhớ trình duyệt (LocalStorage) cũ của bạn lên đám mây (Cloud).
+                    </p>
+                    <button className="option-btn migrate-btn" onClick={handleMigrate} disabled={migrating} style={{ backgroundColor: 'var(--primary-color)', color: 'white', border: 'none' }}>
+                        {migrating ? <Loader2 className="animate-spin" size={20} /> : <Database size={20} />}
+                        {migrating ? 'Đang di trú...' : 'Đưa dữ liệu lên Cloud'}
+                    </button>
+                </div>
+
+                {/* Danger Zone */}
                 <div className="card settings-card danger-zone">
                     <div className="settings-header">
                         <Trash2 size={24} color="var(--danger-color)" />
-                        <h3 style={{ color: 'var(--danger-color)' }}>Vùng Nguy Hiểm</h3>
+                        <h3 style={{ color: 'var(--danger-color)' }}>Bộ nhớ tạm</h3>
                     </div>
                     <p className="settings-desc">
-                        Hard Reset toàn bộ cấu hình ví và lịch sử trên thiết bị này. Hành động không thể hoàn tác!
+                        Xóa dữ liệu cũ đang lưu trên trình duyệt này.
                     </p>
-                    <button className="option-btn delete-btn" onClick={handleClear}>
-                        Xóa mọi dữ liệu
+                    <button className="option-btn delete-btn" onClick={handleClearLocal}>
+                        Dọn dẹp trình duyệt
                     </button>
                 </div>
             </div>
