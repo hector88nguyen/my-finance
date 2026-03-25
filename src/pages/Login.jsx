@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, LogIn, UserPlus } from 'lucide-react';
-import { loginUser, registerUser } from '../services/firebaseService';
+import { loginUser, registerUser, loginWithGoogle } from '../services/firebaseService';
 import './Login.css';
 
 export default function Login() {
@@ -30,6 +30,23 @@ export default function Login() {
             if (msg.includes('auth/email-already-in-use')) msg = 'Email này đã được đăng ký.';
             if (msg.includes('auth/weak-password')) msg = 'Mật khẩu cần tối thiểu 6 ký tự.';
             setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        setError('');
+        setLoading(true);
+        try {
+            await loginWithGoogle();
+            navigate('/');
+        } catch (err) {
+            if (err.code === 'auth/popup-closed-by-user') {
+                setError('Trình duyệt đã chặn hoặc bạn đã huỷ Popup đăng nhập của Google.');
+            } else {
+                setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
+            }
         } finally {
             setLoading(false);
         }
@@ -75,6 +92,23 @@ export default function Login() {
                         {loading ? 'Đang xử lý...' : (isRegister ? 'Đăng ký' : 'Đăng nhập')}
                     </button>
                 </form>
+
+                <div className="divider" style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0', color: 'var(--text-secondary)' }}>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                    <span style={{ padding: '0 1rem', fontSize: '0.9rem' }}>HOẶC</span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                </div>
+
+                <button 
+                    type="button" 
+                    className="btn-outline" 
+                    onClick={handleGoogleLogin} 
+                    disabled={loading}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1rem', background: 'white', color: '#333', border: '1px solid #ddd' }}
+                >
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style={{ width: '20px', height: '20px' }} />
+                    {loading ? 'Đang xử lý...' : 'Tiếp tục với Google'}
+                </button>
 
                 <div className="login-footer" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                     <button 

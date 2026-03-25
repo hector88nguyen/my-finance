@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Các hàm tiện ích (Helper Functions) ---
+    // 1. Kiểm tra người dùng đã Auth qua Firebase hay chưa?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // 2. Kiểm tra dữ liệu (Tài liệu) đó có phải là của chính người đang thao tác không?
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // --- RULES CHO COLLECTION "ACCOUNTS" ---
+    match /accounts/{accountId} {
+      // Quyền Đọc và Xoá: Tài liệu tồn tại trong Database phải khớp với uid của người gửi request
+      allow read, delete: if isSignedIn() && isOwner(resource.data.userId);
+      
+      // Quyền Tạo mới: Dữ liệu (payload) gửi lên phải chứa trường userId khớp với uid
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+      
+      // Quyền Cập nhật: Tránh việc user cố tình sửa đổi userId sang tên của người khác
+      allow update: if isSignedIn() 
+                    && isOwner(resource.data.userId) 
+                    && isOwner(request.resource.data.userId);
+    }
+    
+    // --- RULES CHO COLLECTION "TRANSACTIONS" ---
+    match /transactions/{transactionId} {
+      allow read, delete: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+      allow update: if isSignedIn() 
+                    && isOwner(resource.data.userId) 
+                    && isOwner(request.resource.data.userId);
+    }
+  }
+}

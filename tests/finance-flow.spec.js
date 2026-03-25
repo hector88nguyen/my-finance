@@ -9,11 +9,14 @@ test.describe('Giai đoạn 3: E2E Finance Flow', () => {
     });
 
     test('TC-E01, TC-E02, TC-E03: Luồng Đăng nhập, Tạo ví và Thêm giao dịch', async ({ page }) => {
-        // 1. Login
+        const testEmail = `test_e2e_${Date.now()}@example.com`;
+
+        // 1. Register new user for clean state
         await page.goto('/login');
-        await page.fill('input[placeholder="Nhập tên đăng nhập"]', 'UserE2E');
-        await page.fill('input[placeholder="Nhập mật khẩu"]', '1234');
-        await page.click('button:has-text("Đăng nhập")');
+        await page.locator('.btn-text').click();
+        await page.fill('input[type="email"]', testEmail);
+        await page.fill('input[type="password"]', '123456');
+        await page.click('button:has-text("Đăng ký")');
 
         // Welcome Dashboard
         await expect(page).toHaveURL('/');
