@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test:e2e:emulator": "export VITE_USE_FIREBASE_EMULATOR=true && npx firebase emulators:exec 'npx playwright test'"
   },
   "dependencies": {
     "clsx": "^2.1.1",
