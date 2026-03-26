@@ -14,7 +14,8 @@ const firebaseConfig = {
 
 // Kiểm tra cấu hình có đầy đủ không trước khi khởi tạo
 if (!firebaseConfig.apiKey) {
-  console.warn("⚠️ Firebase API Key bị thiếu. Ứng dụng có thể không hoạt động đúng trên môi trường Production.");
+  const missingKeys = Object.keys(firebaseConfig).filter(k => !firebaseConfig[k]);
+  console.warn(`⚠️ Firebase Config bị thiếu các trường: ${missingKeys.join(', ')}. Ứng dụng có thể bị treo màn hình trắng.`);
 }
 
 const app = initializeApp(firebaseConfig);
