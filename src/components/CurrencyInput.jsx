@@ -13,6 +13,9 @@ export default function CurrencyInput({ value, onChange, className, placeholder,
             decimalsLimit={0}
             groupSeparator=","
             required={required}
+            inputMode="decimal"
+            autoComplete="off"
+            name="amount"
         />
     );
 }

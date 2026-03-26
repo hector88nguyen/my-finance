@@ -66,6 +66,18 @@ export const editAccount = async (id, updatedData) => {
   return { id, ...updatedData };
 };
 
+export const deleteAccount = async (id) => {
+  // 1. Delete all transactions associated with this account
+  const q = query(collection(db, "transactions"), where("accountId", "==", id));
+  const snapshot = await getDocs(q);
+  const deletePromises = snapshot.docs.map(txDoc => deleteDoc(doc(db, "transactions", txDoc.id)));
+  await Promise.all(deletePromises);
+
+  // 2. Delete the account itself
+  const docRef = doc(db, "accounts", id);
+  await deleteDoc(docRef);
+};
+
 // --- TRANSACTIONS SERVICES ---
 export const getTransactions = async (userId) => {
   const q = query(collection(db, "transactions"), where("userId", "==", userId), orderBy("createdAt", "desc"));

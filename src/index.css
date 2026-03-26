@@ -14,7 +14,7 @@
   --border-color: #e2e8f0;
   --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   --border-radius: 12px;
-  --transition: all 0.2s ease-in-out;
+  --transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
   
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-weight: 400;
@@ -38,12 +38,14 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   color: var(--text-main);
+  text-wrap: balance;
 }
 
 a {
   text-decoration: none;
   color: inherit;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 ul {
@@ -56,6 +58,7 @@ button {
   border: none;
   background: transparent;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 input, select, textarea {
@@ -117,14 +120,21 @@ input, select, textarea {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   background-color: var(--surface-color);
   color: var(--text-main);
 }
 
 .input-field:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.input-field:focus-visible {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 .form-group {
@@ -137,4 +147,23 @@ input, select, textarea {
   font-weight: 500;
   font-size: 0.875rem;
   color: var(--text-main);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Performance & Typography Enhancements from Vercel Guidelines */
+.tx-item, .tx-list-item, .acc-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 60px;
+}
+
+.tx-amount, .card-content h3, .balance-amount-row h2, .acc-details p {
+  font-variant-numeric: tabular-nums;
 }

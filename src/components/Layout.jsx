@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { LayoutDashboard, Wallet, PieChart, Grid, LogOut, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { signOutUser, getAccounts } from '../services/firebaseService';
 import './Layout.css';
@@ -7,6 +7,8 @@ import './Layout.css';
 const Layout = ({ user, children }) => {
     const location = useLocation();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const currentAccountId = location.pathname === '/transactions' ? searchParams.get('account') : null;
 
     const [accounts, setAccounts] = useState([]);
     const [isAccOpen, setIsAccOpen] = useState(true);
@@ -64,9 +66,8 @@ const Layout = ({ user, children }) => {
                                 {accounts.map(acc => (
                                     <Link
                                         key={acc.id}
-                                        to="/transactions"
-                                        state={{ filterAccountId: acc.id }}
-                                        className="sub-nav-item"
+                                        to={`/transactions?account=${acc.id}`}
+                                        className={`sub-nav-item ${currentAccountId === acc.id ? 'active' : ''}`}
                                         title="Xem giao dịch tài khoản này"
                                     >
                                         <span className="dot">•</span>
@@ -108,7 +109,7 @@ const Layout = ({ user, children }) => {
                         <Wallet size={24} color="var(--primary-color)" />
                         <h2>Tài chính</h2>
                     </div>
-                    <button onClick={handleLogout} className="logout-icon"><LogOut size={20} /></button>
+                    <button onClick={handleLogout} className="logout-icon" aria-label="Đăng xuất"><LogOut size={20} /></button>
                 </header>
                 <div className="content-wrapper">
                     {children}
@@ -128,6 +129,7 @@ const Layout = ({ user, children }) => {
                 <div className="mobile-nav-fab-container">
                     <button
                         className="mobile-fab"
+                        aria-label="Thêm giao dịch"
                         onClick={() => navigate('/transactions', { state: { openAdd: true } })}
                     >
                         <Plus size={28} />

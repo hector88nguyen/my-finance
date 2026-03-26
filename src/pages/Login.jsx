@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, LogIn, UserPlus } from 'lucide-react';
+import { Wallet, LogIn, UserPlus, Loader2 } from 'lucide-react';
 import { loginUser, registerUser, loginWithGoogle } from '../services/firebaseService';
 import './Login.css';
 
@@ -70,6 +70,9 @@ export default function Login() {
                         <label>Email</label>
                         <input
                             type="email"
+                            name="email"
+                            autoComplete="username"
+                            spellCheck={false}
                             className="input-field"
                             placeholder="example@gmail.com"
                             value={email}
@@ -81,6 +84,8 @@ export default function Login() {
                         <label>Mật khẩu</label>
                         <input
                             type="password"
+                            name="password"
+                            autoComplete={isRegister ? 'new-password' : 'current-password'}
                             className="input-field"
                             placeholder="Nhập mật khẩu (min 6 ký tự)"
                             value={password}
@@ -89,7 +94,7 @@ export default function Login() {
                         />
                     </div>
                     <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
-                        {loading ? 'Đang xử lý...' : (isRegister ? 'Đăng ký' : 'Đăng nhập')}
+                        {loading ? <><Loader2 className="spinner" size={18} /> Đang xử lý...</> : (isRegister ? 'Đăng ký' : 'Đăng nhập')}
                     </button>
                 </form>
 

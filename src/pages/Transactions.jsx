@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, X, Filter, Loader2 } from 'lucide-react';
 import { getTransactions, addTransaction, deleteTransaction, getAccounts, addAccount } from '../services/firebaseService';
 import { CATEGORIES, getCategoryData } from '../utils/categories';
@@ -29,7 +29,17 @@ export default function Transactions({ user }) {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [showModal, setShowModal] = useState(false);
-    const [filterAccountId, setFilterAccountId] = useState('all');
+    
+    const [searchParams, setSearchParams] = useSearchParams();
+    const filterAccountId = searchParams.get('account') || 'all';
+
+    const handleSetFilterAccountId = (id) => {
+        setSearchParams(prev => {
+            if (id === 'all') prev.delete('account');
+            else prev.set('account', id);
+            return prev;
+        });
+    };
 
     // Inline create states
     const [showNewCategory, setShowNewCategory] = useState(false);
@@ -63,11 +73,8 @@ export default function Transactions({ user }) {
             setTransactions(txs);
             setAccounts(accs);
 
-            // Handle location state for filtering or opening modal
-            if (location.state?.filterAccountId) {
-                setFilterAccountId(location.state.filterAccountId);
-                navigate('.', { replace: true, state: {} });
-            } else if (location.state?.openAdd) {
+            // Handle location state for opening modal
+            if (location.state?.openAdd) {
                 const defaultId = location.state.defaultAccountId || (accs.length > 0 ? accs[0].id : '');
                 setFormData(prev => ({ ...prev, accountId: defaultId }));
                 setShowModal(true);
@@ -187,7 +194,7 @@ export default function Transactions({ user }) {
                         <select
                             style={{ border: 'none', outline: 'none', background: 'transparent', fontWeight: 600, color: 'var(--primary-color)', fontSize: '0.95rem' }}
                             value={filterAccountId}
-                            onChange={(e) => setFilterAccountId(e.target.value)}
+                            onChange={(e) => handleSetFilterAccountId(e.target.value)}
                         >
                             <option value="all">Tất cả tài khoản</option>
                             {accounts.map(acc => (
@@ -196,7 +203,11 @@ export default function Transactions({ user }) {
                         </select>
                     </div>
                 </div>
-                <button className="btn-primary" onClick={() => setShowModal(true)}>
+                <button className="btn-primary" onClick={() => {
+                    const defaultId = filterAccountId !== 'all' ? filterAccountId : (accounts.length > 0 ? accounts[0].id : '');
+                    setFormData(prev => ({ ...prev, accountId: defaultId }));
+                    setShowModal(true);
+                }}>
                     <Plus size={20} />
                     Thêm mới
                 </button>
@@ -230,7 +241,7 @@ export default function Transactions({ user }) {
                                             <span className={`tx-amount ${tx.type}`}>
                                                 {tx.type === 'income' ? '+' : '-'}{VND(tx.amount)}
                                             </span>
-                                            <button className="btn-icon delete-btn" onClick={() => handleDelete(tx.id)} title="Xóa giao dịch">
+                                            <button className="btn-icon delete-btn" onClick={() => handleDelete(tx.id)} title="Xóa giao dịch" aria-label="Xóa giao dịch">
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>
@@ -247,7 +258,7 @@ export default function Transactions({ user }) {
                     <div className="modal-content card">
                         <div className="modal-header">
                             <h2>Thêm giao dịch mới</h2>
-                            <button className="btn-icon" onClick={() => setShowModal(false)}><X size={24} /></button>
+                            <button className="btn-icon" onClick={() => setShowModal(false)} aria-label="Đóng"><X size={24} /></button>
                         </div>
 
                         <form onSubmit={handleAdd}>

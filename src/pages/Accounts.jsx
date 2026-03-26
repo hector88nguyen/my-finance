@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Eye, EyeOff, MoreVertical, Wallet, CreditCard, PiggyBank, Briefcase, Loader2 } from 'lucide-react';
-import { getAccounts, addAccount, editAccount } from '../services/firebaseService';
+import { Plus, Eye, EyeOff, MoreVertical, Wallet, CreditCard, PiggyBank, Briefcase, Loader2, Trash2 } from 'lucide-react';
+import { getAccounts, addAccount, editAccount, deleteAccount } from '../services/firebaseService';
 import CurrencyInput from '../components/CurrencyInput';
 import './Accounts.css';
 
@@ -85,6 +85,22 @@ export default function Accounts({ user }) {
         }
     };
 
+    const handleDeleteAccount = async () => {
+        if (!editingAcc) return;
+        if (!confirm('Bạn có chắc chắn muốn xoá tài khoản này không? Mọi giao dịch liên kết có thể sẽ bị ảnh hưởng.')) return;
+        
+        setSubmitting(true);
+        try {
+            await deleteAccount(editingAcc.id);
+            await fetchData();
+            setShowEditModal(false);
+        } catch (err) {
+            alert("Lỗi xoá tài khoản: " + err.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const getIcon = (iconName) => {
         switch (iconName) {
             case 'CreditCard': return <CreditCard size={24} />;
@@ -112,12 +128,12 @@ export default function Accounts({ user }) {
                         <p>Tổng số dư</p>
                         <div className="balance-amount-row">
                             <h2>{formatMoney(totalBalance)}</h2>
-                            <button className="eye-btn" onClick={() => setShowBalance(!showBalance)}>
+                            <button className="eye-btn" onClick={() => setShowBalance(!showBalance)} aria-label={showBalance ? "Ẩn số dư" : "Hiện số dư"}>
                                 {showBalance ? <Eye size={20} /> : <EyeOff size={20} />}
                             </button>
                         </div>
                     </div>
-                    <button className="add-acc-btn" onClick={() => setShowAddModal(true)}>
+                    <button className="add-acc-btn" onClick={() => setShowAddModal(true)} aria-label="Thêm tài khoản">
                         <Plus size={24} />
                     </button>
                 </div>
@@ -126,7 +142,7 @@ export default function Accounts({ user }) {
             <div className="accounts-list-section">
                 <div className="section-title">
                     <h4>Tài khoản chi tiêu ({accounts.length})</h4>
-                    <button className="arrow-btn">&gt;</button>
+                    <button className="arrow-btn" aria-label="Xem chi tiết">&gt;</button>
                 </div>
 
                 <div className="accounts-list card">
@@ -140,7 +156,7 @@ export default function Accounts({ user }) {
                                 <div
                                     className="acc-info-left"
                                     style={{ cursor: 'pointer', flex: 1 }}
-                                    onClick={() => navigate('/transactions', { state: { filterAccountId: acc.id } })}
+                                    onClick={() => navigate(`/transactions?account=${acc.id}`)}
                                     title="Xem giao dịch của tài khoản này"
                                 >
                                     <div className="acc-icon-box">
@@ -156,10 +172,11 @@ export default function Accounts({ user }) {
                                         className="quick-add-btn"
                                         onClick={() => navigate('/transactions', { state: { openAdd: true, defaultAccountId: acc.id } })}
                                         title="Thêm giao dịch"
+                                        aria-label="Thêm giao dịch"
                                     >
                                         <Plus size={20} />
                                     </button>
-                                    <button className="more-btn" onClick={() => handleOpenEdit(acc)} title="Sửa thông tin">
+                                    <button className="more-btn" onClick={() => handleOpenEdit(acc)} title="Sửa thông tin" aria-label="Sửa thông tin">
                                         <MoreVertical size={20} />
                                     </button>
                                 </div>
@@ -233,9 +250,14 @@ export default function Accounts({ user }) {
                                     placeholder="0"
                                 />
                             </div>
-                            <button type="submit" className="btn-primary" disabled={submitting} style={{ width: '100%', marginTop: '1rem', justifyContent: 'center' }}>
-                                {submitting ? 'Đang cập nhật...' : 'Cập nhật'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                                <button type="button" className="btn-outline" style={{ color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }} disabled={submitting} onClick={handleDeleteAccount} aria-label="Xoá tài khoản">
+                                    <Trash2 size={20} />
+                                </button>
+                                <button type="submit" className="btn-primary" disabled={submitting} style={{ flex: 1, justifyContent: 'center' }}>
+                                    {submitting ? 'Đang cập nhật...' : 'Cập nhật'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
