@@ -12,6 +12,11 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+// Kiểm tra cấu hình có đầy đủ không trước khi khởi tạo
+if (!firebaseConfig.apiKey) {
+  console.warn("⚠️ Firebase API Key bị thiếu. Ứng dụng có thể không hoạt động đúng trên môi trường Production.");
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
