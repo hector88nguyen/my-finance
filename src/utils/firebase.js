@@ -18,8 +18,8 @@ export const db = getFirestore(app);
 
 // Kết nối Emulator nếu được yêu cầu (thường dùng trong E2E Test)
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectFirestoreEmulator(db, "localhost", 8080);
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
   console.log("🚀 Đang kết nối tới Firebase Emulator Suite");
 }
 
