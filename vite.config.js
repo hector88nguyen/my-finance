@@ -37,6 +37,20 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/my-finance/index.html',
         navigateFallbackDenylist: [/^\/__/],
+        // Take control immediately on update so stale chunks aren't served
+        skipWaiting: true,
+        clientsClaim: true,
+        // Don't cache JS chunks — let browser fetch fresh on each load
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/.+\.js$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'js-chunks',
+              networkTimeoutSeconds: 10,
+            },
+          },
+        ],
       },
     }),
   ],
