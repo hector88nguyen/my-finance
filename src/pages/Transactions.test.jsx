@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import Transactions from './Transactions';
 import * as firebaseService from '../services/firebaseService';
+import { ToastProvider } from '../contexts/ToastContext';
 
 // Mock dependencies
 vi.mock('../services/firebaseService');
@@ -29,9 +30,11 @@ describe('Transactions Page - Filter Integration', () => {
 
   const renderWithRouter = (initialEntries = ['/transactions']) => {
     return render(
-      <MemoryRouter initialEntries={initialEntries}>
-        <Transactions user={{ uid: 'user123' }} />
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          <Transactions user={{ uid: 'user123' }} />
+        </MemoryRouter>
+      </ToastProvider>
     );
   };
 

@@ -16,10 +16,14 @@ export default defineConfig({
             name: 'chromium',
             use: { ...devices['Desktop Chrome'] },
         },
+        {
+            name: 'iPhone 14 (iOS 16)',
+            use: { ...devices['iPhone 14'] },
+        },
     ],
     webServer: {
-        command: 'npm run dev -- --port 21345',
-        url: 'http://localhost:21345',
+        command: 'npm run build && npm run preview -- --port 21345',
+        url: 'http://localhost:21345/my-finance/',
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000,
     },

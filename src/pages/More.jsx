@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Download, Upload, Trash2, Database, LogOut, User, RefreshCw, Loader2 } from 'lucide-react';
+import { Trash2, Database, LogOut, User, RefreshCw, Loader2 } from 'lucide-react';
 import { signOutUser, addAccount, addTransaction } from '../services/firebaseService';
 import { getAccounts, getTransactions } from '../utils/localStorage';
+import { useToast } from '../contexts/ToastContext';
 import './More.css';
 
 export default function More({ user }) {
+    const { addToast } = useToast();
     const [migrating, setMigrating] = useState(false);
 
     const handleLogout = async () => {
@@ -19,15 +21,14 @@ export default function More({ user }) {
         const localTxs = getTransactions();
 
         if (localAccs.length === 0 && localTxs.length === 0) {
-            alert("Không tìm thấy dữ liệu cũ trong trình duyệt này.");
+            addToast("Không tìm thấy dữ liệu cũ trong trình duyệt này.", 'error');
             return;
         }
 
         if (confirm(`Tìm thấy ${localAccs.length} tài khoản và ${localTxs.length} giao dịch cũ. Bạn có muốn đưa chúng lên Cloud không? (Có thể gây trùng lặp nếu đã thực hiện trước đó)`)) {
             setMigrating(true);
             try {
-                // Migrate accounts first
-                const accMap = {}; // oldId -> newId
+                const accMap = {};
                 for (const acc of localAccs) {
                     const newAcc = await addAccount(user.uid, {
                         name: acc.name,
@@ -37,7 +38,6 @@ export default function More({ user }) {
                     accMap[acc.id] = newAcc.id;
                 }
 
-                // Migrate transactions
                 for (const tx of localTxs) {
                     await addTransaction(user.uid, {
                         type: tx.type,
@@ -48,9 +48,9 @@ export default function More({ user }) {
                     });
                 }
 
-                alert("Chúc mừng! Dữ liệu đã được di trú lên Cloud thành công.");
+                addToast("Dữ liệu đã được di trú lên Cloud thành công!", 'success');
             } catch (err) {
-                alert("Lỗi di trú: " + err.message);
+                addToast("Lỗi di trú: " + err.message, 'error');
             } finally {
                 setMigrating(false);
             }
@@ -60,7 +60,7 @@ export default function More({ user }) {
     const handleClearLocal = () => {
         if (confirm('Xóa bộ nhớ tạm của trình duyệt? (Không ảnh hưởng đến dữ liệu Cloud)')) {
             localStorage.clear();
-            alert('Đã dọn dẹp bộ nhớ tạm.');
+            addToast('Đã dọn dẹp bộ nhớ tạm.', 'success');
             window.location.reload();
         }
     };

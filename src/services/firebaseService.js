@@ -6,18 +6,19 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  where, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  orderBy, 
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+  orderBy,
   serverTimestamp,
-  getDoc
+  getDoc,
+  setDoc
 } from "firebase/firestore";
 import { auth, db } from "../utils/firebase";
 
@@ -114,25 +115,137 @@ export const addTransaction = async (userId, transaction) => {
   return { id: txRef.id, ...txData };
 };
 
+export const addTransfer = async (userId, { fromAccountId, toAccountId, amount, note }) => {
+  const numAmount = Number(amount);
+
+  // Debit source account
+  const fromRef = doc(db, "accounts", fromAccountId);
+  const fromSnap = await getDoc(fromRef);
+  if (!fromSnap.exists()) throw new Error("Tài khoản nguồn không tồn tại.");
+  await updateDoc(fromRef, { balance: Number(fromSnap.data().balance) - numAmount });
+
+  // Credit destination account
+  const toRef = doc(db, "accounts", toAccountId);
+  const toSnap = await getDoc(toRef);
+  if (!toSnap.exists()) throw new Error("Tài khoản đích không tồn tại.");
+  await updateDoc(toRef, { balance: Number(toSnap.data().balance) + numAmount });
+
+  // Record paired transactions linked by transferId
+  const transferId = `transfer_${Date.now()}`;
+  const base = { userId, amount: numAmount, category: 'Chuyển khoản', note: note || '', type: 'transfer', transferId, createdAt: serverTimestamp() };
+  await addDoc(collection(db, "transactions"), { ...base, accountId: fromAccountId, transferDirection: 'out', toAccountId });
+  await addDoc(collection(db, "transactions"), { ...base, accountId: toAccountId, transferDirection: 'in', fromAccountId });
+};
+
+export const editTransaction = async (userId, id, updatedData) => {
+  const txRef = doc(db, "transactions", id);
+  const txSnap = await getDoc(txRef);
+  if (!txSnap.exists()) throw new Error("Giao dịch không tồn tại.");
+
+  const oldTx = txSnap.data();
+  const newAmount = Number(updatedData.amount);
+  const newAccountId = updatedData.accountId || oldTx.accountId;
+
+  // 1. Revert balance của account cũ
+  if (oldTx.accountId) {
+    const oldAccRef = doc(db, "accounts", oldTx.accountId);
+    const oldAccSnap = await getDoc(oldAccRef);
+    if (oldAccSnap.exists()) {
+      const bal = Number(oldAccSnap.data().balance || 0);
+      const reverted = oldTx.type === 'income' ? bal - Number(oldTx.amount) : bal + Number(oldTx.amount);
+      await updateDoc(oldAccRef, { balance: reverted });
+    }
+  }
+
+  // 2. Apply balance mới vào account mới (có thể khác account cũ)
+  if (newAccountId) {
+    const newAccRef = doc(db, "accounts", newAccountId);
+    const newAccSnap = await getDoc(newAccRef);
+    if (newAccSnap.exists()) {
+      const bal = Number(newAccSnap.data().balance || 0);
+      const updated = updatedData.type === 'income' ? bal + newAmount : bal - newAmount;
+      await updateDoc(newAccRef, { balance: updated });
+    }
+  }
+
+  // 3. Update transaction doc (giữ nguyên createdAt)
+  const cleanData = {
+    type: updatedData.type,
+    amount: newAmount,
+    category: updatedData.category,
+    note: updatedData.note || '',
+    accountId: newAccountId,
+  };
+  await updateDoc(txRef, cleanData);
+  return { id, ...cleanData };
+};
+
 export const deleteTransaction = async (userId, id) => {
   const txRef = doc(db, "transactions", id);
   const txSnap = await getDoc(txRef);
-  
-  if (txSnap.exists()) {
-    const tx = txSnap.data();
-    // 1. Revert account balance
+  if (!txSnap.exists()) return;
+
+  const tx = txSnap.data();
+
+  if (tx.type === 'transfer') {
+    // Revert both legs and delete both docs
+    const revertBalance = async (accountId, direction) => {
+      const accRef = doc(db, "accounts", accountId);
+      const accSnap = await getDoc(accRef);
+      if (accSnap.exists()) {
+        const bal = Number(accSnap.data().balance || 0);
+        await updateDoc(accRef, { balance: direction === 'out' ? bal + Number(tx.amount) : bal - Number(tx.amount) });
+      }
+    };
+    await revertBalance(tx.accountId, tx.transferDirection);
+
+    // Delete paired transaction by transferId
+    if (tx.transferId) {
+      const q = query(collection(db, "transactions"), where("transferId", "==", tx.transferId));
+      const snap = await getDocs(q);
+      const paired = snap.docs.find(d => d.id !== id);
+      if (paired) {
+        const pairedTx = paired.data();
+        await revertBalance(pairedTx.accountId, pairedTx.transferDirection);
+        await deleteDoc(doc(db, "transactions", paired.id));
+      }
+    }
+  } else {
+    // income/expense: revert account balance
     if (tx.accountId) {
       const accRef = doc(db, "accounts", tx.accountId);
       const accSnap = await getDoc(accRef);
       if (accSnap.exists()) {
-        const currentBalance = Number(accSnap.data().balance || 0);
-        const revertedBalance = tx.type === 'income'
-          ? currentBalance - Number(tx.amount)
-          : currentBalance + Number(tx.amount);
-        await updateDoc(accRef, { balance: revertedBalance });
+        const bal = Number(accSnap.data().balance || 0);
+        const reverted = tx.type === 'income' ? bal - Number(tx.amount) : bal + Number(tx.amount);
+        await updateDoc(accRef, { balance: reverted });
       }
     }
-    // 2. Delete doc
-    await deleteDoc(txRef);
   }
+  await deleteDoc(txRef);
+};
+
+// --- BUDGET SERVICES ---
+// Budget doc ID = `${userId}_${categoryId}_${year}_${month}` for easy upsert
+export const getBudgets = async (userId, month, year) => {
+  const q = query(
+    collection(db, "budgets"),
+    where("userId", "==", userId),
+    where("month", "==", month),
+    where("year", "==", year)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+export const setBudget = async (userId, { categoryId, categoryName, amount, month, year }) => {
+  const id = `${userId}_${categoryId}_${year}_${month}`;
+  await setDoc(doc(db, "budgets", id), {
+    userId, categoryId, categoryName, amount: Number(amount), month, year
+  }, { merge: true });
+  return { id, userId, categoryId, categoryName, amount: Number(amount), month, year };
+};
+
+export const deleteBudget = async (id) => {
+  await deleteDoc(doc(db, "budgets", id));
 };

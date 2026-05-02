@@ -3,9 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Eye, EyeOff, MoreVertical, Wallet, CreditCard, PiggyBank, Briefcase, Loader2, Trash2 } from 'lucide-react';
 import { getAccounts, addAccount, editAccount, deleteAccount } from '../services/firebaseService';
 import CurrencyInput from '../components/CurrencyInput';
+import { useToast } from '../contexts/ToastContext';
 import './Accounts.css';
 
 export default function Accounts({ user }) {
+    const { addToast } = useToast();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showBalance, setShowBalance] = useState(true);
@@ -56,8 +58,9 @@ export default function Accounts({ user }) {
             setShowAddModal(false);
             setNewAccName('');
             setNewAccBalance('');
+            addToast(`Đã thêm tài khoản "${newAccName}".`, 'success');
         } catch (err) {
-            alert("Lỗi thêm tài khoản: " + err.message);
+            addToast("Lỗi thêm tài khoản: " + err.message, 'error');
         } finally {
             setSubmitting(false);
         }
@@ -78,8 +81,9 @@ export default function Accounts({ user }) {
             await editAccount(editingAcc.id, { name: editAccName, balance: editAccBalance });
             await fetchData();
             setShowEditModal(false);
+            addToast("Đã cập nhật tài khoản.", 'success');
         } catch (err) {
-            alert("Lỗi cập nhật: " + err.message);
+            addToast("Lỗi cập nhật: " + err.message, 'error');
         } finally {
             setSubmitting(false);
         }
@@ -88,14 +92,15 @@ export default function Accounts({ user }) {
     const handleDeleteAccount = async () => {
         if (!editingAcc) return;
         if (!confirm('Bạn có chắc chắn muốn xoá tài khoản này không? Mọi giao dịch liên kết có thể sẽ bị ảnh hưởng.')) return;
-        
+
         setSubmitting(true);
         try {
             await deleteAccount(editingAcc.id);
             await fetchData();
             setShowEditModal(false);
+            addToast("Đã xoá tài khoản.", 'success');
         } catch (err) {
-            alert("Lỗi xoá tài khoản: " + err.message);
+            addToast("Lỗi xoá tài khoản: " + err.message, 'error');
         } finally {
             setSubmitting(false);
         }

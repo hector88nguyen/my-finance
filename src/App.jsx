@@ -4,6 +4,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './utils/firebase';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -14,7 +17,7 @@ const More = lazy(() => import('./pages/More'));
 
 const ProtectedRoute = ({ user, loading, children }) => {
   if (loading) {
-    return <div className="loading-screen">Đang tải...</div>;
+    return <LoadingSpinner fullScreen />;
   }
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -35,27 +38,31 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="loading-screen">Đang tải ứng dụng...</div>;
+    return <LoadingSpinner fullScreen />;
   }
 
   return (
-    <ErrorBoundary>
-      <HashRouter>
-        <Suspense fallback={<div className="loading-screen">Đang tải trang...</div>}>
-          <Routes>
-            <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+    <ThemeProvider>
+      <ToastProvider>
+        <ErrorBoundary>
+          <HashRouter>
+            <Suspense fallback={<LoadingSpinner fullScreen />}>
+              <Routes>
+                <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
 
-            <Route path="/" element={<ProtectedRoute user={user} loading={loading}><Dashboard user={user} /></ProtectedRoute>} />
-            <Route path="/accounts" element={<ProtectedRoute user={user} loading={loading}><Accounts user={user} /></ProtectedRoute>} />
-            <Route path="/transactions" element={<ProtectedRoute user={user} loading={loading}><Transactions user={user} /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute user={user} loading={loading}><Reports user={user} /></ProtectedRoute>} />
-            <Route path="/more" element={<ProtectedRoute user={user} loading={loading}><More user={user} /></ProtectedRoute>} />
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </HashRouter>
-    </ErrorBoundary>
+                <Route path="/" element={<ProtectedRoute user={user} loading={loading}><Dashboard user={user} /></ProtectedRoute>} />
+                <Route path="/accounts" element={<ProtectedRoute user={user} loading={loading}><Accounts user={user} /></ProtectedRoute>} />
+                <Route path="/transactions" element={<ProtectedRoute user={user} loading={loading}><Transactions user={user} /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute user={user} loading={loading}><Reports user={user} /></ProtectedRoute>} />
+                <Route path="/more" element={<ProtectedRoute user={user} loading={loading}><More user={user} /></ProtectedRoute>} />
+                
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </HashRouter>
+        </ErrorBoundary>
+      </ToastProvider>
+    </ThemeProvider>
   )
 }
 

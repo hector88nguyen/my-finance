@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { LayoutDashboard, Wallet, PieChart, Grid, LogOut, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { signOutUser, getAccounts } from '../services/firebaseService';
+import ThemeToggle from './ui/ThemeToggle';
 import './Layout.css';
 
 const Layout = ({ user, children }) => {
@@ -36,8 +37,11 @@ const Layout = ({ user, children }) => {
         <div className="layout">
             <aside className="sidebar">
                 <div className="sidebar-header">
-                    <Wallet size={32} color="var(--primary-color)" />
-                    <h2>Tài chính</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Wallet size={32} color="var(--primary-color)" />
+                        <h2>Tài chính</h2>
+                    </div>
+                    <ThemeToggle />
                 </div>
 
                 <nav className="sidebar-nav">
@@ -109,7 +113,10 @@ const Layout = ({ user, children }) => {
                         <Wallet size={24} color="var(--primary-color)" />
                         <h2>Tài chính</h2>
                     </div>
-                    <button onClick={handleLogout} className="logout-icon" aria-label="Đăng xuất"><LogOut size={20} /></button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <ThemeToggle />
+                        <button onClick={handleLogout} className="logout-icon" aria-label="Đăng xuất"><LogOut size={20} /></button>
+                    </div>
                 </header>
                 <div className="content-wrapper">
                     {children}

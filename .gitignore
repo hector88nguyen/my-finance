@@ -29,3 +29,6 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.agent/preview.pid
+scan_results.json
+test_output.log
