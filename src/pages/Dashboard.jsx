@@ -116,7 +116,7 @@ export default function Dashboard({ user }) {
                     <div className="card-icon"><Wallet size={24} /></div>
                     <div className="card-content">
                         <p>Tổng tài sản</p>
-                        <h3>{VND(totalAssets)}</h3>
+                        <h3 style={totalAssets < 0 ? { color: 'var(--danger-color)' } : {}}>{VND(totalAssets)}</h3>
                     </div>
                 </div>
                 <div className="card summary-card income-card">

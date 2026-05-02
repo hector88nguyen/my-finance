@@ -139,7 +139,7 @@ export default function Accounts({ user }) {
                     <div className="balance-section">
                         <p>Tổng số dư</p>
                         <div className="balance-amount-row">
-                            <h2>{formatMoney(totalBalance)}</h2>
+                            <h2 style={totalBalance < 0 ? { color: 'var(--danger-color)' } : {}}>{formatMoney(totalBalance)}</h2>
                             <button className="eye-btn" onClick={() => setShowBalance(!showBalance)} aria-label={showBalance ? "Ẩn số dư" : "Hiện số dư"}>
                                 {showBalance ? <Eye size={20} /> : <EyeOff size={20} />}
                             </button>
@@ -176,7 +176,7 @@ export default function Accounts({ user }) {
                                     </div>
                                     <div className="acc-details">
                                         <h5 style={{ color: 'var(--primary-color)' }}>{acc.name}</h5>
-                                        <p>{formatMoney(acc.balance)}</p>
+                                        <p style={Number(acc.balance) < 0 ? { color: 'var(--danger-color)', fontWeight: 600 } : {}}>{formatMoney(acc.balance)}</p>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
