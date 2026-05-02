@@ -23,20 +23,20 @@ describe('Giai đoạn 2 – Integration Test: CurrencyInput Component', () => {
         expect(screen.getByTestId('output').textContent).toBe('EMPTY');
     });
 
-    it('TC-I01b: Nhập số 1234567 → hiển thị định dạng 1,234,567', () => {
+    it('TC-I01b: Nhập số 1234567 → hiển thị định dạng 1.234.567', () => {
         render(<TestWrapper />);
         const input = screen.getByPlaceholderText('test-input');
 
         fireEvent.change(input, { target: { value: '1234567' } });
         expect(screen.getByTestId('output').textContent).toBe('1234567');
-        expect(input.value).toBe('1,234,567');
+        expect(input.value).toBe('1.234.567');
     });
 
     it('TC-I01c: Không chứa ký tự chữ sau khi nhập', () => {
         render(<TestWrapper />);
         const input = screen.getByPlaceholderText('test-input');
 
-        fireEvent.change(input, { target: { value: '1,234,567abc' } });
+        fireEvent.change(input, { target: { value: '1.234.567abc' } });
         expect(input.value.indexOf('abc')).toBe(-1);
     });
 

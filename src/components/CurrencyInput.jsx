@@ -11,7 +11,8 @@ export default function CurrencyInput({ value, onChange, className, placeholder,
                 onChange(val ? Number(val) : '');
             }}
             decimalsLimit={0}
-            groupSeparator=","
+            groupSeparator="."
+            decimalSeparator=","
             required={required}
             inputMode="decimal"
             autoComplete="off"
