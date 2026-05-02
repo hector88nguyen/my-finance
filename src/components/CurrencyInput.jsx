@@ -6,7 +6,7 @@ export default function CurrencyInput({ value, onChange, className, placeholder,
         <CurrencyInputField
             className={className}
             placeholder={placeholder}
-            value={value === 0 ? '0' : value}
+            value={value === '' || value === null || value === undefined ? '' : String(value)}
             onValueChange={(val) => {
                 onChange(val ? Number(val) : '');
             }}

@@ -76,9 +76,16 @@ export default function Accounts({ user }) {
     const handleEditAccount = async (e) => {
         e.preventDefault();
         if (!editAccName || !editingAcc) return;
+        const safeBalance = editAccBalance === '' || editAccBalance === null || editAccBalance === undefined
+            ? 0
+            : Number(editAccBalance);
+        if (isNaN(safeBalance)) {
+            addToast("Số dư không hợp lệ.", 'error');
+            return;
+        }
         setSubmitting(true);
         try {
-            await editAccount(editingAcc.id, { name: editAccName, balance: editAccBalance });
+            await editAccount(editingAcc.id, { name: editAccName, balance: safeBalance });
             await fetchData();
             setShowEditModal(false);
             addToast("Đã cập nhật tài khoản.", 'success');

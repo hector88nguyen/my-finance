@@ -78,7 +78,7 @@ test.describe('Authed Tests (Skip-CI)', () => {
 
     test.describe('TC-E02: Quản lý Tài khoản', () => {
         test('TC-E02a: Tạo tài khoản mới', async ({ page }) => {
-            await page.goto('/my-finance/#/accounts');
+            await page.locator('.nav-item[href="#/accounts"]').click();
             await page.locator('.add-acc-btn').click();
             await page.fill('input[placeholder="Vd: ATM, Thẻ tín dụng..."]', 'Ví E2E');
             await page.fill('input.amount-input', '5000000');
@@ -89,7 +89,7 @@ test.describe('Authed Tests (Skip-CI)', () => {
         });
 
         test('TC-E02b: Ẩn/Hiện số dư', async ({ page }) => {
-            await page.goto('/my-finance/#/accounts');
+            await page.locator('.nav-item[href="#/accounts"]').click();
             // Tạo tạm 1 ví để có số tiền > 0
             await page.locator('.add-acc-btn').click();
             await page.fill('input[placeholder="Vd: ATM, Thẻ tín dụng..."]', 'Ví E2E');
@@ -107,7 +107,7 @@ test.describe('Authed Tests (Skip-CI)', () => {
         });
 
         test('TC-E02c: Sửa tài khoản', async ({ page }) => {
-            await page.goto('/my-finance/#/accounts');
+            await page.locator('.nav-item[href="#/accounts"]').click();
             // Tạo tài khoản trước
             await page.locator('.add-acc-btn').click();
             await page.fill('input[placeholder="Vd: ATM, Thẻ tín dụng..."]', 'Ví Edit');
@@ -124,11 +124,11 @@ test.describe('Authed Tests (Skip-CI)', () => {
 
             // Kiểm tra update
             await expect(page.locator('.accounts-list')).toContainText('Ví Edited', { timeout: 10000 });
-            await expect(page.locator('.accounts-list')).not.toContainText('Ví Edit');
+            await expect(page.locator('.acc-item h5').filter({ hasText: /^Ví Edit$/ })).toHaveCount(0);
         });
 
         test('TC-E02d: Xóa tài khoản', async ({ page }) => {
-            await page.goto('/my-finance/#/accounts');
+            await page.locator('.nav-item[href="#/accounts"]').click();
             // Tạo tài khoản
             await page.locator('.add-acc-btn').click();
             await page.fill('input[placeholder="Vd: ATM, Thẻ tín dụng..."]', 'Ví Delete');
