@@ -3,7 +3,7 @@ import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Loader2 } from 'lucide-
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { getTransactions } from '../services/firebaseService';
+import { getTransactions, getAccounts } from '../services/firebaseService';
 import './Dashboard.css';
 
 const VND = (amount) =>
@@ -25,6 +25,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function Dashboard({ user }) {
     const [transactions, setTransactions] = useState([]);
+    const [accounts, setAccounts] = useState([]);
     const [chartFilter, setChartFilter] = useState('month'); // 'week' | 'month'
     const [loading, setLoading] = useState(true);
 
@@ -32,10 +33,14 @@ export default function Dashboard({ user }) {
         const fetchData = async () => {
             if (user) {
                 try {
-                    const data = await getTransactions(user.uid);
-                    setTransactions(data);
+                    const [txData, accData] = await Promise.all([
+                        getTransactions(user.uid),
+                        getAccounts(user.uid),
+                    ]);
+                    setTransactions(txData);
+                    setAccounts(accData);
                 } catch (err) {
-                    console.error("Lỗi lấy giao dịch:", err);
+                    console.error("Lỗi lấy dữ liệu:", err);
                 } finally {
                     setLoading(false);
                 }
@@ -44,9 +49,17 @@ export default function Dashboard({ user }) {
         fetchData();
     }, [user]);
 
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-    const balance = totalIncome - totalExpense;
+    // Total assets = sum of actual account balances
+    const totalAssets = accounts.reduce((s, acc) => s + Number(acc.balance || 0), 0);
+
+    // Income/expense filtered to current month only
+    const now = new Date();
+    const thisMonthTx = transactions.filter(t => {
+        const d = new Date(t.createdAt);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const totalIncome = thisMonthTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+    const totalExpense = thisMonthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
 
     const chartData = useMemo(() => {
         const now = new Date();
@@ -103,7 +116,7 @@ export default function Dashboard({ user }) {
                     <div className="card-icon"><Wallet size={24} /></div>
                     <div className="card-content">
                         <p>Tổng tài sản</p>
-                        <h3>{VND(balance)}</h3>
+                        <h3>{VND(totalAssets)}</h3>
                     </div>
                 </div>
                 <div className="card summary-card income-card">
