@@ -3,7 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// When SW deploys a new version, old chunks no longer exist — reload to get the new build
+// Reload when a new Service Worker takes control (new deployment activated)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload()
+  })
+}
+
+// Fallback: reload if a dynamic chunk fails to load (stale cache edge case)
 window.addEventListener('vite:preloadError', () => {
   window.location.reload()
 })

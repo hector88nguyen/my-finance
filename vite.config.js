@@ -34,20 +34,25 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Only precache static shell — NOT JS/CSS chunks (they change every deploy)
+        globPatterns: ['**/*.{html,ico,png,svg,woff2}'],
         navigateFallback: '/my-finance/index.html',
         navigateFallbackDenylist: [/^\/__/],
-        // Take control immediately on update so stale chunks aren't served
         skipWaiting: true,
         clientsClaim: true,
-        // Don't cache JS chunks — let browser fetch fresh on each load
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/.+\.js$/,
+            // JS and CSS chunks: always try network first, cache as fallback
+            urlPattern: /\/assets\/.+\.(js|css)$/,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'js-chunks',
+              cacheName: 'app-chunks',
               networkTimeoutSeconds: 10,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day
+              },
             },
           },
         ],
