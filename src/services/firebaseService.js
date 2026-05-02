@@ -46,7 +46,9 @@ export const signOutUser = () => signOut(auth);
 export const getAccounts = async (userId) => {
   const q = query(collection(db, "accounts"), where("userId", "==", userId), orderBy("createdAt", "desc"));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return querySnapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 };
 
 export const addAccount = async (userId, accountData) => {
