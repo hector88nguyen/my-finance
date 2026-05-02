@@ -3,13 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.google.com http://127.0.0.1:* ws://127.0.0.1:*; frame-src 'self' https://*.firebaseapp.com https://*.google.com;" />
-    <link rel="icon" type="image/svg+xml" href="/my-finance/favicon.svg" />
+    <link rel="icon" type="image/png" href="/my-finance/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Finance</title>
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#863bff" />
+    <link rel="manifest" href="/my-finance/manifest.webmanifest" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="My Finance" />
+    <link rel="apple-touch-icon" href="/my-finance/icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/my-finance/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/my-finance/icons/icon-167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/my-finance/icons/icon-180.png" />
     <script type="module" crossorigin src="/my-finance/assets/index-CIrOaA2R.js"></script>
     <link rel="modulepreload" crossorigin href="/my-finance/assets/jsx-runtime-z6JNqANT.js">
     <link rel="stylesheet" crossorigin href="/my-finance/assets/index-DdU1P0Kk.css">
-  </head>
+  <link rel="manifest" href="/my-finance/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/my-finance/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
   </body>
