@@ -472,8 +472,7 @@ export default function Transactions({ user }) {
                             {!editingTx && (
                                 <button type="button" className={`toggle-btn ${formData.type === 'transfer' ? 'transfer-active' : ''}`}
                                     onClick={() => { setFormData({ ...formData, type: 'transfer', category: '' }); setShowCategoryPicker(false); }}>
-                                    <ArrowLeftRight size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                                    CK
+                                    Chuyển khoản
                                 </button>
                             )}
                         </div>
