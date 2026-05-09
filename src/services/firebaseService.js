@@ -98,8 +98,9 @@ export const addTransaction = async (userId, transaction) => {
     ...transaction,
     userId,
     amount: Number(transaction.amount),
-    createdAt: serverTimestamp()
+    createdAt: transaction.date ? new Date(transaction.date + 'T12:00:00') : serverTimestamp()
   };
+  delete txData.date;
   const txRef = await addDoc(collection(db, "transactions"), txData);
 
   // 2. Update account balance
@@ -117,7 +118,7 @@ export const addTransaction = async (userId, transaction) => {
   return { id: txRef.id, ...txData };
 };
 
-export const addTransfer = async (userId, { fromAccountId, toAccountId, amount, note }) => {
+export const addTransfer = async (userId, { fromAccountId, toAccountId, amount, note, date }) => {
   const numAmount = Number(amount);
 
   // Debit source account
@@ -134,7 +135,8 @@ export const addTransfer = async (userId, { fromAccountId, toAccountId, amount, 
 
   // Record paired transactions linked by transferId
   const transferId = `transfer_${Date.now()}`;
-  const base = { userId, amount: numAmount, category: 'Chuyển khoản', note: note || '', type: 'transfer', transferId, createdAt: serverTimestamp() };
+  const txDate = date ? new Date(date + 'T12:00:00') : serverTimestamp();
+  const base = { userId, amount: numAmount, category: 'Chuyển khoản', note: note || '', type: 'transfer', transferId, createdAt: txDate };
   await addDoc(collection(db, "transactions"), { ...base, accountId: fromAccountId, transferDirection: 'out', toAccountId });
   await addDoc(collection(db, "transactions"), { ...base, accountId: toAccountId, transferDirection: 'in', fromAccountId });
 };
@@ -170,7 +172,7 @@ export const editTransaction = async (userId, id, updatedData) => {
     }
   }
 
-  // 3. Update transaction doc (giữ nguyên createdAt)
+  // 3. Update transaction doc
   const cleanData = {
     type: updatedData.type,
     amount: newAmount,
@@ -178,6 +180,9 @@ export const editTransaction = async (userId, id, updatedData) => {
     note: updatedData.note || '',
     accountId: newAccountId,
   };
+  if (updatedData.date) {
+    cleanData.createdAt = new Date(updatedData.date + 'T12:00:00');
+  }
   await updateDoc(txRef, cleanData);
   return { id, ...cleanData };
 };

@@ -58,16 +58,19 @@ export default function Transactions({ user }) {
     const [newAccountName, setNewAccountName] = useState('');
     const [newAccountBalance, setNewAccountBalance] = useState('');
 
+    const todayStr = () => new Date().toISOString().split('T')[0];
+
     const [formData, setFormData] = useState({
         type: 'expense',
         amount: '',
         category: '',
         note: '',
-        accountId: ''
+        accountId: '',
+        date: todayStr()
     });
 
     // Transfer form state
-    const [transferData, setTransferData] = useState({ fromAccountId: '', toAccountId: '', amount: '', note: '' });
+    const [transferData, setTransferData] = useState({ fromAccountId: '', toAccountId: '', amount: '', note: '', date: todayStr() });
 
     // Custom categories added inline (UI only until added to a tx)
     const [customCategories, setCustomCategories] = useState([]);
@@ -119,7 +122,8 @@ export default function Transactions({ user }) {
             setShowModal(false);
             setFormData({
                 type: 'expense', amount: '', category: '', note: '',
-                accountId: accounts.length > 0 ? accounts[0].id : ''
+                accountId: accounts.length > 0 ? accounts[0].id : '',
+                date: todayStr()
             });
             setCustomCategories([]);
             setShowNewCategory(false);
@@ -139,7 +143,8 @@ export default function Transactions({ user }) {
             amount: tx.amount,
             category: tx.category,
             note: tx.note || '',
-            accountId: tx.accountId
+            accountId: tx.accountId,
+            date: tx.createdAt ? tx.createdAt.split('T')[0] : todayStr()
         });
         setCustomCategories([]);
         setShowNewCategory(false);
@@ -159,7 +164,7 @@ export default function Transactions({ user }) {
             await fetchData();
             setShowModal(false);
             setEditingTx(null);
-            setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '' });
+            setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '', date: todayStr() });
             addToast("Đã cập nhật giao dịch.", 'success');
         } catch (err) {
             addToast("Lỗi cập nhật: " + err.message, 'error');
@@ -171,8 +176,8 @@ export default function Transactions({ user }) {
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingTx(null);
-        setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '' });
-        setTransferData({ fromAccountId: '', toAccountId: '', amount: '', note: '' });
+        setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '', date: todayStr() });
+        setTransferData({ fromAccountId: '', toAccountId: '', amount: '', note: '', date: todayStr() });
         setCustomCategories([]);
         setShowNewCategory(false);
         setShowNewAccount(false);
@@ -193,7 +198,7 @@ export default function Transactions({ user }) {
             await addTransfer(user.uid, transferData);
             await fetchData();
             setShowModal(false);
-            setTransferData({ fromAccountId: '', toAccountId: '', amount: '', note: '' });
+            setTransferData({ fromAccountId: '', toAccountId: '', amount: '', note: '', date: todayStr() });
             addToast("Chuyển tiền thành công.", 'success');
         } catch (err) {
             addToast("Lỗi chuyển tiền: " + err.message, 'error');
@@ -311,7 +316,7 @@ export default function Transactions({ user }) {
                 <button className="btn-primary" onClick={() => {
                     const defaultId = filterAccountId !== 'all' ? filterAccountId : (accounts.length > 0 ? accounts[0].id : '');
                     setEditingTx(null);
-                    setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: defaultId });
+                    setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: defaultId, date: todayStr() });
                     setShowModal(true);
                 }}>
                     <Plus size={20} />
@@ -488,6 +493,11 @@ export default function Transactions({ user }) {
                                         value={transferData.amount} onChange={val => setTransferData({ ...transferData, amount: val })} required />
                                 </div>
                                 <div className="form-group">
+                                    <label>Ngày giao dịch</label>
+                                    <input type="date" className="input-field"
+                                        value={transferData.date} onChange={e => setTransferData({ ...transferData, date: e.target.value })} required />
+                                </div>
+                                <div className="form-group">
                                     <label>Ghi chú (Tùy chọn)</label>
                                     <input type="text" className="input-field" placeholder="Lý do chuyển tiền"
                                         value={transferData.note} onChange={e => setTransferData({ ...transferData, note: e.target.value })} />
@@ -556,6 +566,12 @@ export default function Transactions({ user }) {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Ngày giao dịch</label>
+                                    <input type="date" className="input-field"
+                                        value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
                                 </div>
 
                                 <div className="form-group">
