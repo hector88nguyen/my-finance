@@ -421,7 +421,7 @@ export default function Transactions({ user }) {
                                                 {isTransfer
                                                     ? (tx.transferDirection === 'out' ? '-' : '+')
                                                     : (tx.type === 'income' ? '+' : '-')
-                                                }{VND(tx.amount)}
+                                                }{VND(Math.abs(Number(tx.amount)))}
                                             </span>
                                             {!isTransfer && (
                                                 <button className="btn-icon" onClick={() => handleEdit(tx)} title="Sửa giao dịch" aria-label="Sửa giao dịch">

@@ -27,6 +27,16 @@
     border-bottom: none;
 }
 
+.tx-amount.income {
+    color: var(--success-color);
+    font-weight: 700;
+}
+
+.tx-amount.expense {
+    color: var(--danger-color);
+    font-weight: 700;
+}
+
 .tx-actions {
     display: flex;
     align-items: center;
@@ -75,6 +85,14 @@
     max-width: 450px;
     animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    overflow-x: hidden;
+}
+
+input[type="date"].input-field {
+    min-width: 0;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 @keyframes modalIn {
