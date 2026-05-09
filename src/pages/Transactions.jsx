@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, X, Filter, Loader2, Edit2, ArrowLeftRight, ChevronDown } from 'lucide-react';
 import { getTransactions, addTransaction, editTransaction, addTransfer, deleteTransaction, getAccounts, addAccount } from '../services/firebaseService';
-import { CATEGORIES, getCategoryData } from '../utils/categories';
+import { CATEGORIES, EXPENSE_GROUPS, INCOME_GROUPS, getCategoryData } from '../utils/categories';
 import CurrencyInput from '../components/CurrencyInput';
 import { useToast } from '../contexts/ToastContext';
 import './Transactions.css';
@@ -53,6 +53,7 @@ export default function Transactions({ user }) {
 
     // Inline create states
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+    const [expandedParentId, setExpandedParentId] = useState(null);
     const [showNewCategory, setShowNewCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [showNewAccount, setShowNewAccount] = useState(false);
@@ -138,6 +139,7 @@ export default function Transactions({ user }) {
             });
             setCustomCategories([]);
             setShowCategoryPicker(false);
+            setExpandedParentId(null);
             setShowNewCategory(false);
             setShowNewAccount(false);
             addToast("Đã lưu giao dịch thành công.", 'success');
@@ -160,6 +162,7 @@ export default function Transactions({ user }) {
         });
         setCustomCategories([]);
         setShowCategoryPicker(false);
+        setExpandedParentId(null);
         setShowNewCategory(false);
         setShowNewAccount(false);
         setShowModal(true);
@@ -179,6 +182,7 @@ export default function Transactions({ user }) {
             setEditingTx(null);
             setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '', date: todayStr() });
             setShowCategoryPicker(false);
+            setExpandedParentId(null);
             addToast("Đã cập nhật giao dịch.", 'success');
         } catch (err) {
             addToast("Lỗi cập nhật: " + err.message, 'error');
@@ -194,6 +198,7 @@ export default function Transactions({ user }) {
         setTransferData({ fromAccountId: '', toAccountId: '', amount: '', note: '', date: todayStr() });
         setCustomCategories([]);
         setShowCategoryPicker(false);
+        setExpandedParentId(null);
         setShowNewCategory(false);
         setShowNewAccount(false);
     };
@@ -296,8 +301,9 @@ export default function Transactions({ user }) {
         return Object.values(groups);
     }, [transactions, filterAccountId, searchKeyword, filterCategory, filterFromDate, filterToDate]);
 
-    const allCategories = [...(CATEGORIES[formData.type] || []), ...customCategories];
     const allCategoriesForFilter = [...CATEGORIES.expense, ...CATEGORIES.income];
+    const activeGroups = formData.type === 'income' ? INCOME_GROUPS : EXPENSE_GROUPS;
+    const expandedGroup = activeGroups.find(g => g.id === expandedParentId) || null;
     const activeFilterCount = [searchKeyword, filterCategory, filterFromDate, filterToDate].filter(Boolean).length;
 
     if (loading && transactions.length === 0) {
@@ -466,12 +472,12 @@ export default function Transactions({ user }) {
                         {/* Tab selector — ẩn tab Chuyển khoản khi đang ở mode edit */}
                         <div className="type-toggle">
                             <button type="button" className={`toggle-btn ${formData.type === 'expense' ? 'expense-active' : ''}`}
-                                onClick={() => { setFormData({ ...formData, type: 'expense', category: '' }); setShowCategoryPicker(false); }}>Khoản Chi</button>
+                                onClick={() => { setFormData({ ...formData, type: 'expense', category: '' }); setShowCategoryPicker(false); setExpandedParentId(null); }}>Khoản Chi</button>
                             <button type="button" className={`toggle-btn ${formData.type === 'income' ? 'income-active' : ''}`}
-                                onClick={() => { setFormData({ ...formData, type: 'income', category: '' }); setShowCategoryPicker(false); }}>Khoản Thu</button>
+                                onClick={() => { setFormData({ ...formData, type: 'income', category: '' }); setShowCategoryPicker(false); setExpandedParentId(null); }}>Khoản Thu</button>
                             {!editingTx && (
                                 <button type="button" className={`toggle-btn ${formData.type === 'transfer' ? 'transfer-active' : ''}`}
-                                    onClick={() => { setFormData({ ...formData, type: 'transfer', category: '' }); setShowCategoryPicker(false); }}>
+                                    onClick={() => { setFormData({ ...formData, type: 'transfer', category: '' }); setShowCategoryPicker(false); setExpandedParentId(null); }}>
                                     Chuyển khoản
                                 </button>
                             )}
@@ -533,11 +539,11 @@ export default function Transactions({ user }) {
                                     <button type="button" className="category-trigger input-field"
                                         onClick={() => { setShowCategoryPicker(s => !s); setShowNewCategory(false); }}>
                                         {formData.category ? (() => {
-                                            const cat = allCategories.find(c => c.name === formData.category);
+                                            const cat = getCategoryData(formData.category, formData.type);
                                             return (
                                                 <span className="cat-selected">
-                                                    <span className="cat-emoji-sm" style={{ backgroundColor: `${cat?.color || '#94a3b8'}20` }}>
-                                                        {cat?.emoji || '🏷️'}
+                                                    <span className="cat-emoji-sm" style={{ backgroundColor: `${cat.color}20` }}>
+                                                        {cat.emoji}
                                                     </span>
                                                     {formData.category}
                                                 </span>
@@ -547,22 +553,64 @@ export default function Transactions({ user }) {
                                     </button>
 
                                     {showCategoryPicker && (
-                                        <div className="category-grid">
-                                            {allCategories.map(cat => (
-                                                <button type="button" key={cat.id || cat.name}
-                                                    className={`category-tile ${formData.category === cat.name ? 'selected' : ''}`}
-                                                    onClick={() => { setFormData({ ...formData, category: cat.name }); setShowCategoryPicker(false); }}>
-                                                    <span className="cat-emoji-bg" style={{ backgroundColor: `${cat.color || '#94a3b8'}20` }}>
-                                                        {cat.emoji || '🏷️'}
-                                                    </span>
-                                                    <span className="cat-name">{cat.name}</span>
+                                        <div className="category-picker-panel">
+                                            {/* Tầng 1: grid category cha */}
+                                            <div className="category-grid">
+                                                {activeGroups.map(group => {
+                                                    const isParentOfSelected = group.children.some(c => c.name === formData.category);
+                                                    const isSelected = formData.category === group.name || isParentOfSelected;
+                                                    return (
+                                                        <button type="button" key={group.id}
+                                                            className={`category-tile ${isSelected ? 'selected' : ''}`}
+                                                            onClick={() => {
+                                                                setFormData({ ...formData, category: group.name });
+                                                                if (group.children.length > 0) {
+                                                                    setExpandedParentId(expandedParentId === group.id ? null : group.id);
+                                                                } else {
+                                                                    setShowCategoryPicker(false);
+                                                                    setExpandedParentId(null);
+                                                                }
+                                                            }}>
+                                                            <span className="cat-emoji-bg" style={{ backgroundColor: `${group.color}20` }}>
+                                                                {group.emoji}
+                                                            </span>
+                                                            <span className="cat-name">{group.name}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                                {customCategories.map(cat => (
+                                                    <button type="button" key={cat.id}
+                                                        className={`category-tile ${formData.category === cat.name ? 'selected' : ''}`}
+                                                        onClick={() => { setFormData({ ...formData, category: cat.name }); setShowCategoryPicker(false); setExpandedParentId(null); }}>
+                                                        <span className="cat-emoji-bg" style={{ backgroundColor: '#94a3b820' }}>🏷️</span>
+                                                        <span className="cat-name">{cat.name}</span>
+                                                    </button>
+                                                ))}
+                                                <button type="button" className="category-tile"
+                                                    onClick={() => { setShowCategoryPicker(false); setExpandedParentId(null); setShowNewCategory(true); }}>
+                                                    <span className="cat-emoji-bg" style={{ backgroundColor: '#e2e8f0' }}>➕</span>
+                                                    <span className="cat-name">Tạo mới</span>
                                                 </button>
-                                            ))}
-                                            <button type="button" className="category-tile"
-                                                onClick={() => { setShowCategoryPicker(false); setShowNewCategory(true); }}>
-                                                <span className="cat-emoji-bg" style={{ backgroundColor: '#e2e8f0' }}>➕</span>
-                                                <span className="cat-name">Tạo mới</span>
-                                            </button>
+                                            </div>
+
+                                            {/* Tầng 2: sub-category của cha đang mở */}
+                                            {expandedGroup && expandedGroup.children.length > 0 && (
+                                                <div className="subcategory-panel">
+                                                    <p className="subcat-label">{expandedGroup.name}</p>
+                                                    <div className="subcategory-grid">
+                                                        {expandedGroup.children.map(child => (
+                                                            <button type="button" key={child.id}
+                                                                className={`category-tile ${formData.category === child.name ? 'selected' : ''}`}
+                                                                onClick={() => { setFormData({ ...formData, category: child.name }); setShowCategoryPicker(false); setExpandedParentId(null); }}>
+                                                                <span className="cat-emoji-bg" style={{ backgroundColor: `${expandedGroup.color}20` }}>
+                                                                    {child.emoji}
+                                                                </span>
+                                                                <span className="cat-name">{child.name}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 

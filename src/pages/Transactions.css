@@ -345,18 +345,43 @@ input[type="date"].input-field {
     flex-shrink: 0;
 }
 
+.category-picker-panel {
+    margin-top: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    animation: fadeIn 0.15s ease;
+}
+
 .category-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.4rem;
     padding: 0.75rem;
     background: var(--bg-color);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    margin-top: 0.5rem;
     max-height: 230px;
     overflow-y: auto;
-    animation: fadeIn 0.15s ease;
+}
+
+.subcategory-panel {
+    border-top: 1px solid var(--border-color);
+    background: var(--surface-color);
+    padding: 0.75rem;
+}
+
+.subcat-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.subcategory-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
 }
 
 .category-tile {
