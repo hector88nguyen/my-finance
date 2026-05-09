@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, X, Filter, Loader2, Edit2, ArrowLeftRight } from 'lucide-react';
+import { Plus, Trash2, X, Filter, Loader2, Edit2, ArrowLeftRight, ChevronDown } from 'lucide-react';
 import { getTransactions, addTransaction, editTransaction, addTransfer, deleteTransaction, getAccounts, addAccount } from '../services/firebaseService';
 import { CATEGORIES, getCategoryData } from '../utils/categories';
 import CurrencyInput from '../components/CurrencyInput';
@@ -52,6 +52,7 @@ export default function Transactions({ user }) {
     };
 
     // Inline create states
+    const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [showNewCategory, setShowNewCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [showNewAccount, setShowNewAccount] = useState(false);
@@ -136,6 +137,7 @@ export default function Transactions({ user }) {
                 date: todayStr()
             });
             setCustomCategories([]);
+            setShowCategoryPicker(false);
             setShowNewCategory(false);
             setShowNewAccount(false);
             addToast("Đã lưu giao dịch thành công.", 'success');
@@ -157,6 +159,7 @@ export default function Transactions({ user }) {
             date: tx.createdAt ? tx.createdAt.split('T')[0] : todayStr()
         });
         setCustomCategories([]);
+        setShowCategoryPicker(false);
         setShowNewCategory(false);
         setShowNewAccount(false);
         setShowModal(true);
@@ -175,6 +178,7 @@ export default function Transactions({ user }) {
             setShowModal(false);
             setEditingTx(null);
             setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '', date: todayStr() });
+            setShowCategoryPicker(false);
             addToast("Đã cập nhật giao dịch.", 'success');
         } catch (err) {
             addToast("Lỗi cập nhật: " + err.message, 'error');
@@ -189,6 +193,7 @@ export default function Transactions({ user }) {
         setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: accounts.length > 0 ? accounts[0].id : '', date: todayStr() });
         setTransferData({ fromAccountId: '', toAccountId: '', amount: '', note: '', date: todayStr() });
         setCustomCategories([]);
+        setShowCategoryPicker(false);
         setShowNewCategory(false);
         setShowNewAccount(false);
     };
@@ -291,7 +296,7 @@ export default function Transactions({ user }) {
         return Object.values(groups);
     }, [transactions, filterAccountId, searchKeyword, filterCategory, filterFromDate, filterToDate]);
 
-    const allCategories = [...CATEGORIES[formData.type], ...customCategories];
+    const allCategories = [...(CATEGORIES[formData.type] || []), ...customCategories];
     const allCategoriesForFilter = [...CATEGORIES.expense, ...CATEGORIES.income];
     const activeFilterCount = [searchKeyword, filterCategory, filterFromDate, filterToDate].filter(Boolean).length;
 
@@ -461,14 +466,14 @@ export default function Transactions({ user }) {
                         {/* Tab selector — ẩn tab Chuyển khoản khi đang ở mode edit */}
                         <div className="type-toggle">
                             <button type="button" className={`toggle-btn ${formData.type === 'expense' ? 'expense-active' : ''}`}
-                                onClick={() => setFormData({ ...formData, type: 'expense', category: '' })}>Khoản Chi</button>
+                                onClick={() => { setFormData({ ...formData, type: 'expense', category: '' }); setShowCategoryPicker(false); }}>Khoản Chi</button>
                             <button type="button" className={`toggle-btn ${formData.type === 'income' ? 'income-active' : ''}`}
-                                onClick={() => setFormData({ ...formData, type: 'income', category: '' })}>Khoản Thu</button>
+                                onClick={() => { setFormData({ ...formData, type: 'income', category: '' }); setShowCategoryPicker(false); }}>Khoản Thu</button>
                             {!editingTx && (
                                 <button type="button" className={`toggle-btn ${formData.type === 'transfer' ? 'transfer-active' : ''}`}
-                                    onClick={() => setFormData({ ...formData, type: 'transfer', category: '' })}>
+                                    onClick={() => { setFormData({ ...formData, type: 'transfer', category: '' }); setShowCategoryPicker(false); }}>
                                     <ArrowLeftRight size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                                    Chuyển khoản
+                                    CK
                                 </button>
                             )}
                         </div>
@@ -526,17 +531,42 @@ export default function Transactions({ user }) {
 
                                 <div className="form-group">
                                     <label>Danh mục</label>
-                                    <select className="input-field" value={formData.category}
-                                        onChange={(e) => {
-                                            if (e.target.value === '__new__') { setShowNewCategory(true); }
-                                            else { setFormData({ ...formData, category: e.target.value }); }
-                                        }} required>
-                                        <option value="">-- Chọn danh mục --</option>
-                                        {allCategories.map(cat => (
-                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                        ))}
-                                        <option value="__new__">+ Tạo danh mục mới...</option>
-                                    </select>
+                                    <button type="button" className="category-trigger input-field"
+                                        onClick={() => { setShowCategoryPicker(s => !s); setShowNewCategory(false); }}>
+                                        {formData.category ? (() => {
+                                            const cat = allCategories.find(c => c.name === formData.category);
+                                            return (
+                                                <span className="cat-selected">
+                                                    <span className="cat-emoji-sm" style={{ backgroundColor: `${cat?.color || '#94a3b8'}20` }}>
+                                                        {cat?.emoji || '🏷️'}
+                                                    </span>
+                                                    {formData.category}
+                                                </span>
+                                            );
+                                        })() : <span style={{ color: 'var(--text-muted)' }}>-- Chọn danh mục --</span>}
+                                        <ChevronDown size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                                    </button>
+
+                                    {showCategoryPicker && (
+                                        <div className="category-grid">
+                                            {allCategories.map(cat => (
+                                                <button type="button" key={cat.id || cat.name}
+                                                    className={`category-tile ${formData.category === cat.name ? 'selected' : ''}`}
+                                                    onClick={() => { setFormData({ ...formData, category: cat.name }); setShowCategoryPicker(false); }}>
+                                                    <span className="cat-emoji-bg" style={{ backgroundColor: `${cat.color || '#94a3b8'}20` }}>
+                                                        {cat.emoji || '🏷️'}
+                                                    </span>
+                                                    <span className="cat-name">{cat.name}</span>
+                                                </button>
+                                            ))}
+                                            <button type="button" className="category-tile"
+                                                onClick={() => { setShowCategoryPicker(false); setShowNewCategory(true); }}>
+                                                <span className="cat-emoji-bg" style={{ backgroundColor: '#e2e8f0' }}>➕</span>
+                                                <span className="cat-name">Tạo mới</span>
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {showNewCategory && (
                                         <div className="inline-create-box">
                                             <input className="input-field" placeholder="Tên danh mục mới"
