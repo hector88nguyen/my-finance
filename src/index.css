@@ -112,6 +112,7 @@ ul {
 button {
   cursor: pointer;
   font-family: inherit;
+  font-size: inherit;
   border: none;
   background: transparent;
   transition: var(--transition);

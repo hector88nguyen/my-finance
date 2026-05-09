@@ -109,6 +109,16 @@ export default function Transactions({ user }) {
         fetchData();
     }, [user]);
 
+    // Handle FAB "+" when already on this page (no remount, location.state changes)
+    useEffect(() => {
+        if (!location.state?.openAdd) return;
+        const defaultId = location.state.defaultAccountId || (accounts.length > 0 ? accounts[0].id : '');
+        setEditingTx(null);
+        setFormData({ type: 'expense', amount: '', category: '', note: '', accountId: defaultId, date: todayStr() });
+        setShowModal(true);
+        navigate('.', { replace: true, state: {} });
+    }, [location.state?.openAdd]);
+
     const handleAdd = async (e) => {
         e.preventDefault();
         if (!formData.amount || !formData.category || !formData.accountId || !user) {
